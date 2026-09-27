@@ -163,7 +163,35 @@ class SheetStudio {
       }
     }
 
-    // 6. Simple math evaluation (e.g. B2*C2 or A1+100)
+    // 6. ROUND(A1, 2)
+    const roundMatch = formula.match(/^ROUND\(([A-Z0-9]+),\s*(\d+)\)$/);
+    if (roundMatch) {
+      const coord = this._parseRef(roundMatch[1]);
+      const decimals = parseInt(roundMatch[2], 10);
+      if (coord && this.data[coord.r]) {
+        const val = Number(this.evaluateCell(this.data[coord.r][coord.c])) || 0;
+        return Number(val.toFixed(decimals));
+      }
+    }
+
+    // 7. UPPER(A1) & LOWER(A1)
+    const upperMatch = formula.match(/^UPPER\(([A-Z0-9]+)\)$/);
+    if (upperMatch) {
+      const coord = this._parseRef(upperMatch[1]);
+      if (coord && this.data[coord.r]) {
+        return String(this.evaluateCell(this.data[coord.r][coord.c]) || '').toUpperCase();
+      }
+    }
+
+    const lowerMatch = formula.match(/^LOWER\(([A-Z0-9]+)\)$/);
+    if (lowerMatch) {
+      const coord = this._parseRef(lowerMatch[1]);
+      if (coord && this.data[coord.r]) {
+        return String(this.evaluateCell(this.data[coord.r][coord.c]) || '').toLowerCase();
+      }
+    }
+
+    // 8. Simple math evaluation (e.g. B2*C2 or A1+100)
     let expr = formula;
     const refRegex = /([A-Z]+[0-9]+)/g;
     expr = expr.replace(refRegex, (match) => {
@@ -527,6 +555,174 @@ class SheetStudio {
     a.download = filename;
     a.click();
     URL.revokeObjectURL(url);
+  }
+
+  autoNumberSTT(col = this.activeCell.c) {
+    if (window.sound) window.sound.click();
+    let num = 1;
+    for (let r = 1; r < this.rows; r++) {
+      const neighbor = (col + 1 < this.cols) ? this.data[r]?.[col + 1] : this.data[r]?.[col - 1];
+      if (neighbor !== undefined && neighbor !== null && String(neighbor).trim() !== '') {
+        this.data[r][col] = num++;
+      } else if (r <= 8 && !neighbor) {
+        this.data[r][col] = num++;
+      }
+    }
+    this.renderGrid();
+  }
+
+  applyConditionalFormatting(col = this.activeCell.c) {
+    if (window.sound) window.sound.click();
+    let min = Infinity, max = -Infinity;
+    for (let r = 1; r < this.rows; r++) {
+      const val = Number(this.evaluateCell(this.data[r]?.[col]));
+      if (!isNaN(val) && this.data[r]?.[col] !== '') {
+        if (val < min) min = val;
+        if (val > max) max = val;
+      }
+    }
+
+    for (let r = 1; r < this.rows; r++) {
+      const val = Number(this.evaluateCell(this.data[r]?.[col]));
+      if (!isNaN(val) && this.data[r]?.[col] !== '') {
+        const key = `${r}_${col}`;
+        if (!this.styles[key]) this.styles[key] = {};
+        if (val < 0) {
+          this.styles[key].color = '#ef4444';
+          this.styles[key].bg = 'rgba(239, 68, 68, 0.18)';
+          this.styles[key].bold = true;
+        } else if (val === max && max > 0) {
+          this.styles[key].color = '#10b981';
+          this.styles[key].bg = 'rgba(16, 185, 129, 0.18)';
+          this.styles[key].bold = true;
+        }
+      }
+    }
+    this.renderGrid();
+  }
+
+  insertSheetTemplate(type) {
+    if (window.sound) window.sound.success();
+    if (type === 'bang_luong') {
+      this.data = [
+        ['STT', 'Họ Và Tên', 'Chức Vụ', 'Lương Cơ Bản', 'Phụ Cấp', 'Thực Lĩnh'],
+        [1, 'Nguyễn Văn An', 'Trưởng Phòng', 15000000, 2000000, '=D2+E2'],
+        [2, 'Trần Thị Bình', 'Chuyên Viên', 10000000, 1500000, '=D3+E3'],
+        [3, 'Lê Hoàng Cường', 'Kỹ Sư', 12000000, 1800000, '=D4+E4'],
+        [4, 'Phạm Ngọc Dung', 'Kế Toán', 11000000, 1200000, '=D5+E5'],
+        ['Tổng', '', '', '=SUM(D2:D5)', '=SUM(E2:E5)', '=SUM(F2:F5)']
+      ];
+      this.rows = Math.max(12, this.data.length + 3);
+      this.cols = Math.max(8, this.data[0].length + 2);
+    } else if (type === 'thu_chi') {
+      this.data = [
+        ['Ngày', 'Khoản Mục Thu/Chi', 'Loại', 'Số Tiền (VNĐ)', 'Ghi Chú'],
+        ['01/10', 'Thu tiền bán hàng', 'Thu', 45000000, 'Khách hàng chuyển khoản'],
+        ['03/10', 'Chi tiền thuê văn phòng', 'Chi', -15000000, 'Đã chuyển'],
+        ['05/10', 'Chi tiền điện nước, internet', 'Chi', -2800000, 'Hóa đơn tháng'],
+        ['10/10', 'Thu tiền dự án dịch vụ', 'Thu', 32000000, 'Hợp đồng số 12'],
+        ['Tổng', '', '', '=SUM(D2:D5)', '']
+      ];
+      this.rows = Math.max(12, this.data.length + 3);
+      this.cols = Math.max(8, this.data[0].length + 2);
+    } else if (type === 'ke_hoach') {
+      this.data = [
+        ['Hạng Mục Kế Hoạch', 'Dự Toán', 'Thực Tế', 'Chênh Lệch', 'Tỷ Lệ Hoàn Thành (%)'],
+        ['Tiền nhà & sinh hoạt', 8000000, 7500000, '=B2-C2', '=ROUND(C2/B2*100, 1)'],
+        ['Ăn uống & mua sắm', 5000000, 5200000, '=B3-C3', '=ROUND(C3/B3*100, 1)'],
+        ['Học tập & phát triển', 3000000, 2500000, '=B4-C4', '=ROUND(C4/B4*100, 1)'],
+        ['Đầu tư & tiết kiệm', 6000000, 6000000, '=B5-C5', '=ROUND(C5/B5*100, 1)'],
+        ['Tổng Cộng', '=SUM(B2:B5)', '=SUM(C2:C5)', '=SUM(D2:D5)', '']
+      ];
+      this.rows = Math.max(12, this.data.length + 3);
+      this.cols = Math.max(8, this.data[0].length + 2);
+    }
+
+    for (let r = 0; r < this.rows; r++) {
+      if (!this.data[r]) this.data[r] = [];
+      for (let c = 0; c < this.cols; c++) {
+        if (this.data[r][c] === undefined) this.data[r][c] = '';
+      }
+    }
+
+    for (let c = 0; c < this.cols; c++) {
+      this.styles[`0_${c}`] = { bold: true, bg: 'rgba(255, 255, 255, 0.08)' };
+    }
+    this.renderGrid();
+    this.selectCell(0, 0);
+  }
+
+  renderChartModal() {
+    if (window.sound) window.sound.success();
+    const modal = document.getElementById('sheet-chart-modal');
+    const canvas = document.getElementById('sheet-chart-canvas');
+    if (!modal || !canvas) return;
+
+    modal.classList.remove('hidden');
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    const labels = [];
+    const values = [];
+    let valCol = this.activeCell.c > 0 ? this.activeCell.c : 1;
+
+    for (let r = 1; r < this.rows; r++) {
+      const rawVal = this.evaluateCell(this.data[r]?.[valCol]);
+      const num = Number(rawVal);
+      if (!isNaN(num) && rawVal !== '' && rawVal !== null && this.data[r]?.[0] !== 'Tổng' && this.data[r]?.[0] !== 'Tổng Cộng') {
+        const lbl = String(this.data[r]?.[0] || `Hàng ${r}`);
+        labels.push(lbl);
+        values.push(num);
+      }
+    }
+
+    if (values.length === 0) {
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '16px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Vui lòng chọn cột chứa số liệu để vẽ biểu đồ.', canvas.width / 2, canvas.height / 2);
+      return;
+    }
+
+    const maxVal = Math.max(...values.map(Math.abs), 1);
+    const chartW = canvas.width - 120;
+    const chartH = canvas.height - 100;
+    const barW = Math.min(54, (chartW / values.length) * 0.6);
+    const gap = chartW / values.length;
+
+    // Axes
+    ctx.strokeStyle = '#334155';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(80, 40);
+    ctx.lineTo(80, canvas.height - 60);
+    ctx.lineTo(canvas.width - 40, canvas.height - 60);
+    ctx.stroke();
+
+    const colors = ['#38bdf8', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6', '#06b6d4'];
+
+    values.forEach((v, idx) => {
+      const x = 90 + idx * gap + (gap - barW) / 2;
+      const h = (Math.abs(v) / maxVal) * (chartH - 40);
+      const y = v >= 0 ? (canvas.height - 60 - h) : (canvas.height - 60);
+
+      ctx.fillStyle = v >= 0 ? colors[idx % colors.length] : '#ef4444';
+      ctx.beginPath();
+      ctx.roundRect(x, y, barW, Math.max(4, h), [6, 6, 0, 0]);
+      ctx.fill();
+
+      // Top value label
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = 'bold 11px sans-serif';
+      ctx.textAlign = 'center';
+      const displayVal = Math.abs(v) >= 1000000 ? (v / 1000000).toFixed(1) + 'M' : (Math.abs(v) >= 1000 ? (v / 1000).toFixed(0) + 'k' : v);
+      ctx.fillText(displayVal, x + barW / 2, y - 6);
+
+      // Bottom label
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '11px sans-serif';
+      ctx.fillText(labels[idx].substring(0, 10), x + barW / 2, canvas.height - 40);
+    });
   }
 }
 

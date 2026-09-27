@@ -34,6 +34,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     });
 
+    if (tabId === 'pdf') {
+      if (!loadedPdfArrayBuffer && window.createBlankPdf) {
+        window.createBlankPdf(true);
+      }
+    }
     if (tabId === 'sheet' && window.sheetStudio) {
       window.sheetStudio.renderGrid();
     }
@@ -302,52 +307,88 @@ document.addEventListener('DOMContentLoaded', async () => {
       ctx.fill();
     }
 
-    function showInlineTextInput(clientX, clientY, pos) {
-      const input = document.createElement('input');
-      input.type = 'text';
-      input.placeholder = 'Gõ chữ tiếng Việt rồi bấm Enter...';
-      input.style.position = 'fixed';
-      input.style.left = `${clientX}px`;
-      input.style.top = `${clientY}px`;
-      input.style.zIndex = '9999';
-      input.style.background = '#0f172a';
-      const color = document.getElementById('pdf-draw-color')?.value || '#ef4444';
-      input.style.color = color;
-      input.style.border = '2px solid var(--accent-cyan)';
-      input.style.borderRadius = '6px';
-      input.style.padding = '6px 10px';
-      input.style.fontSize = '14px';
-      input.style.fontWeight = 'bold';
-      input.style.boxShadow = '0 6px 20px rgba(0,0,0,0.6)';
-      input.style.outline = 'none';
+    function showInteractiveTextPopover(clientX, clientY, pos) {
+      document.querySelectorAll('.pdf-text-editor-popover').forEach(el => el.remove());
 
-      document.body.appendChild(input);
-      input.focus();
+      const container = document.getElementById('pdf-canvas-container');
+      if (!container) return;
 
-      let committed = false;
+      const rect = container.getBoundingClientRect();
+      const popover = document.createElement('div');
+      popover.className = 'pdf-text-editor-popover';
+
+      const popX = Math.max(10, Math.min(rect.width - 280, clientX - rect.left));
+      const popY = Math.max(10, Math.min(rect.height - 130, clientY - rect.top));
+
+      popover.style.left = `${popX}px`;
+      popover.style.top = `${popY}px`;
+
+      popover.innerHTML = `
+        <textarea placeholder="Nhập văn bản tiếng Việt... (Ctrl+Enter để chèn)"></textarea>
+        <div class="pdf-text-popover-controls">
+          <div style="display: flex; gap: 4px; align-items: center;">
+            <select class="platform-select popover-size" style="padding: 2px 4px; font-size: 0.75rem;">
+              <option value="16">16px</option>
+              <option value="20" selected>20px</option>
+              <option value="26">26px</option>
+              <option value="34">34px</option>
+              <option value="46">46px</option>
+            </select>
+            <button type="button" class="tool-btn popover-bold-btn" style="width: 24px; height: 24px; font-size: 0.75rem;" title="In đậm"><b>B</b></button>
+          </div>
+          <div style="display: flex; gap: 4px;">
+            <button type="button" class="btn-secondary popover-cancel-btn" style="padding: 3px 8px; font-size: 0.75rem;">Hủy</button>
+            <button type="button" class="btn-primary popover-commit-btn" style="padding: 3px 10px; font-size: 0.75rem;">✓ Chèn</button>
+          </div>
+        </div>
+      `;
+
+      container.appendChild(popover);
+      const textarea = popover.querySelector('textarea');
+      textarea.focus();
+
+      let isBold = false;
+      const boldBtn = popover.querySelector('.popover-bold-btn');
+      boldBtn.onclick = () => {
+        isBold = !isBold;
+        boldBtn.style.color = isBold ? 'var(--accent-cyan)' : 'inherit';
+      };
+
       const commit = async () => {
-        if (committed) return;
-        committed = true;
-        const val = input.value.trim();
-        input.remove();
-        if (!val) return;
-        drawCtx = pdfDrawingCanvas.getContext('2d');
-        drawCtx.font = 'bold 22px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif';
-        drawCtx.fillStyle = color;
-        drawCtx.fillText(val, pos.x, pos.y);
+        const textVal = textarea.value.trim();
+        popover.remove();
+        if (!textVal) return;
 
-        // Bake to PDF
+        const fontSize = parseInt(popover.querySelector('.popover-size').value, 10);
+        const color = document.getElementById('pdf-draw-color')?.value || '#ef4444';
+
+        drawCtx = pdfDrawingCanvas.getContext('2d');
+        drawCtx.font = `${isBold ? 'bold' : 'normal'} ${fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+        drawCtx.fillStyle = color;
+        drawCtx.textBaseline = 'top';
+
+        const lines = textVal.split('\n');
+        lines.forEach((line, lIdx) => {
+          drawCtx.fillText(line, pos.x, pos.y + lIdx * (fontSize * 1.3));
+        });
+
         try {
           const dataUrl = pdfDrawingCanvas.toDataURL('image/png');
           await window.pdfEditorClient.addDrawnOverlay(window.pdfEditorClient.currentPage, dataUrl);
         } catch (err) {}
+        if (window.sound) window.sound.success();
       };
 
-      input.addEventListener('keydown', (ev) => {
-        if (ev.key === 'Enter') commit();
-        if (ev.key === 'Escape') { committed = true; input.remove(); }
+      popover.querySelector('.popover-commit-btn').onclick = commit;
+      popover.querySelector('.popover-cancel-btn').onclick = () => popover.remove();
+      textarea.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Enter' && (ev.ctrlKey || ev.metaKey)) {
+          ev.preventDefault();
+          commit();
+        } else if (ev.key === 'Escape') {
+          popover.remove();
+        }
       });
-      input.addEventListener('blur', commit);
     }
 
     const startDraw = (e) => {
@@ -357,7 +398,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (activePdfTool === 'text') {
         const cx = e.touches ? e.touches[0].clientX : e.clientX;
         const cy = e.touches ? e.touches[0].clientY : e.clientY;
-        showInlineTextInput(cx, cy, pos);
+        showInteractiveTextPopover(cx, cy, pos);
         return;
       }
 
@@ -393,6 +434,21 @@ document.addEventListener('DOMContentLoaded', async () => {
       } else if (activePdfTool === 'rect') {
         drawCtx.putImageData(canvasSnapshot, 0, 0);
         drawCtx.strokeRect(startX, startY, pos.x - startX, pos.y - startY);
+      } else if (activePdfTool === 'circle') {
+        drawCtx.putImageData(canvasSnapshot, 0, 0);
+        const rx = Math.abs(pos.x - startX) / 2;
+        const ry = Math.abs(pos.y - startY) / 2;
+        const cx = Math.min(startX, pos.x) + rx;
+        const cy = Math.min(startY, pos.y) + ry;
+        drawCtx.beginPath();
+        drawCtx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+        drawCtx.stroke();
+      } else if (activePdfTool === 'line') {
+        drawCtx.putImageData(canvasSnapshot, 0, 0);
+        drawCtx.beginPath();
+        drawCtx.moveTo(startX, startY);
+        drawCtx.lineTo(pos.x, pos.y);
+        drawCtx.stroke();
       } else if (activePdfTool === 'arrow') {
         drawCtx.putImageData(canvasSnapshot, 0, 0);
         drawArrow(drawCtx, startX, startY, pos.x, pos.y);
@@ -415,6 +471,27 @@ document.addEventListener('DOMContentLoaded', async () => {
     pdfDrawingCanvas.ontouchstart = startDraw;
     pdfDrawingCanvas.ontouchmove = draw;
     window.addEventListener('touchend', endDraw);
+
+    // Alignment Grid Toggle
+    window.togglePdfGrid = function() {
+      const container = document.getElementById('pdf-canvas-container');
+      if (!container) return;
+      const isActive = container.classList.toggle('pdf-grid-active');
+      if (window.sound) window.sound.click();
+      const btn = document.getElementById('pdf-grid-toggle');
+      if (btn) btn.classList.toggle('active', isActive);
+    };
+
+    // Filter Mode Switcher
+    window.setPdfFilter = function(filterName) {
+      const container = document.getElementById('pdf-canvas-container');
+      if (!container) return;
+      if (window.sound) window.sound.click();
+      container.classList.remove('pdf-filter-night', 'pdf-filter-scan', 'pdf-filter-sepia');
+      if (filterName !== 'none') {
+        container.classList.add(`pdf-filter-${filterName}`);
+      }
+    };
 
     // Night Mode Toggle
     window.togglePdfNightMode = function() {
@@ -458,6 +535,58 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (window.sound) window.sound.click();
       drawCtx.clearRect(0, 0, pdfDrawingCanvas.width, pdfDrawingCanvas.height);
     }
+  };
+
+  // Create / Initialize Blank A4 PDF Document
+  window.createBlankPdf = async function(silent = false) {
+    if (!silent && window.sound) window.sound.swoop();
+    const bytes = await window.pdfEditorClient.createBlankDocument();
+    loadedPdfArrayBuffer = bytes.buffer;
+    await window.pdfEditorClient.loadPdf(loadedPdfArrayBuffer);
+    await renderPdfPages();
+  };
+
+  // OCR / Extract Page Text
+  window.extractCurrentPageText = async function() {
+    if (!loadedPdfArrayBuffer || !window.pdfjsLib) {
+      alert('Chưa có nội dung trang PDF để trích xuất.');
+      return;
+    }
+    if (window.sound) window.sound.click();
+    const pdf = await window.pdfjsLib.getDocument({ data: loadedPdfArrayBuffer.slice(0) }).promise;
+    const pageNum = window.pdfEditorClient.currentPage + 1;
+    const page = await pdf.getPage(pageNum);
+    const textContent = await page.getTextContent();
+    const text = textContent.items.map(item => item.str).join(' ');
+    
+    if (!text.trim()) {
+      alert(`Trang ${pageNum} là trang trắng hoặc hình ảnh scan, không có văn bản dạng text.`);
+      return;
+    }
+
+    navigator.clipboard.writeText(text);
+    alert(`Đã trích xuất & sao chép thành công văn bản Trang ${pageNum} vào Clipboard:\n\n"${text.substring(0, 180)}..."`);
+  };
+
+  // Bates Numbering
+  window.applyBatesNumbering = async function(format = 'Trang {page} / {total}', pos = 'bottom-center') {
+    if (!window.pdfEditorClient.pdfDoc) return;
+    if (window.sound) window.sound.success();
+    await window.pdfEditorClient.addPageNumbers(format, pos);
+    const bytes = await window.pdfEditorClient.exportPdfBytes();
+    loadedPdfArrayBuffer = bytes.buffer;
+    await renderPdfPages();
+    alert('Đã đánh số trang Bates cho toàn bộ tài liệu PDF!');
+  };
+
+  // Preset Stamps
+  window.applyPresetStamp = async function(type) {
+    if (!window.pdfEditorClient.pdfDoc) return;
+    if (window.sound) window.sound.success();
+    await window.pdfEditorClient.addPresetStamp(type, window.pdfEditorClient.currentPage);
+    const bytes = await window.pdfEditorClient.exportPdfBytes();
+    loadedPdfArrayBuffer = bytes.buffer;
+    await renderPdfPages();
   };
 
   // Upload PDF for Editing

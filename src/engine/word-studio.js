@@ -44,6 +44,131 @@ class WordStudio {
     this.updateStats();
   }
 
+  setLineSpacing(spacing) {
+    if (window.sound) window.sound.click();
+    const selection = window.getSelection();
+    if (!selection.rangeCount) return;
+    let node = selection.anchorNode;
+    while (node && node !== this.editorEl && node.nodeType === 3) {
+      node = node.parentNode;
+    }
+    if (node && node !== this.editorEl) {
+      node.style.lineHeight = spacing;
+    } else if (this.editorEl) {
+      this.editorEl.style.lineHeight = spacing;
+    }
+  }
+
+  insertCalloutBlock(type = 'quote') {
+    if (window.sound) window.sound.click();
+    let html = '';
+    if (type === 'quote') {
+      html = `<blockquote style="border-left: 4px solid var(--accent-cyan); padding: 8px 16px; margin: 12px 0; background: rgba(56, 189, 248, 0.08); border-radius: 0 8px 8px 0; font-style: italic;">"Nhập câu trích dẫn hoặc ý kiến quan trọng tại đây..."</blockquote><p><br></p>`;
+    } else if (type === 'warning') {
+      html = `<div style="border-left: 4px solid #f59e0b; padding: 10px 16px; margin: 12px 0; background: rgba(245, 158, 11, 0.08); border-radius: 0 8px 8px 0; color: #f8fafc;"><b>⚠️ Lưu ý quan trọng:</b> Nhập nội dung cảnh báo tại đây...</div><p><br></p>`;
+    } else if (type === 'success') {
+      html = `<div style="border-left: 4px solid #10b981; padding: 10px 16px; margin: 12px 0; background: rgba(16, 185, 129, 0.08); border-radius: 0 8px 8px 0; color: #f8fafc;"><b>✓ Hoàn thành:</b> Nhập ghi chú xác nhận tại đây...</div><p><br></p>`;
+    } else {
+      html = `<div style="border-left: 4px solid #38bdf8; padding: 10px 16px; margin: 12px 0; background: rgba(56, 189, 248, 0.08); border-radius: 0 8px 8px 0; color: #f8fafc;"><b>ℹ️ Thông tin:</b> Nhập nội dung hướng dẫn tại đây...</div><p><br></p>`;
+    }
+    document.execCommand('insertHTML', false, html);
+    this.updateStats();
+  }
+
+  insertSymbol(symbol) {
+    if (window.sound) window.sound.click();
+    document.execCommand('insertText', false, symbol);
+    this.updateStats();
+  }
+
+  clearFormatting() {
+    if (window.sound) window.sound.click();
+    document.execCommand('removeFormat', false, null);
+    this.updateStats();
+  }
+
+  insertAdministrativeTemplate(type) {
+    if (window.sound) window.sound.success();
+    let templateHtml = '';
+
+    if (type === 'don_xin_phep') {
+      templateHtml = `
+        <div style="text-align: center; font-weight: bold; margin-bottom: 1.5rem;">
+          <p style="font-size: 15px; margin: 0; text-transform: uppercase;">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</p>
+          <p style="font-size: 14px; margin: 4px 0 0 0; text-decoration: underline;">Độc lập - Tự do - Hạnh phúc</p>
+        </div>
+        <h2 style="text-align: center; margin: 1.5rem 0 1rem 0; font-size: 20px;">ĐƠN XIN PHÉP NGHỈ VIỆC / TẠM VẮNG</h2>
+        <p><b>Kính gửi:</b> Ban Giám đốc và Phòng Hành chính Nhân sự</p>
+        <p>Tên tôi là: ................................................................................................................</p>
+        <p>Chức vụ / Bộ phận: .....................................................................................................</p>
+        <p>Nay tôi làm đơn này xin phép được nghỉ từ ngày .../.../202... đến hết ngày .../.../202...</p>
+        <p>Lý do xin nghỉ: ...........................................................................................................</p>
+        <p>Công việc trong thời gian nghỉ tôi xin bàn giao cho: ........................................................</p>
+        <p>Kính mong Ban Giám đốc xem xét và phê duyệt. Tôi xin chân thành cảm ơn!</p>
+        <div style="display: flex; justify-content: space-between; margin-top: 2.5rem;">
+          <div style="text-align: center;"><b>NGƯỜI DUYỆT</b><br><br><br><br><i>(Ký và ghi rõ họ tên)</i></div>
+          <div style="text-align: center;"><i>Ngày ..... tháng ..... năm 202...</i><br><b>NGƯỜI LÀM ĐƠN</b><br><br><br><br><i>(Ký và ghi rõ họ tên)</i></div>
+        </div>
+        <p><br></p>
+      `;
+    } else if (type === 'hop_dong') {
+      templateHtml = `
+        <div style="text-align: center; font-weight: bold; margin-bottom: 1.5rem;">
+          <p style="font-size: 15px; margin: 0; text-transform: uppercase;">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</p>
+          <p style="font-size: 14px; margin: 4px 0 0 0; text-decoration: underline;">Độc lập - Tự do - Hạnh phúc</p>
+        </div>
+        <h2 style="text-align: center; margin: 1.5rem 0 0.5rem 0; font-size: 20px;">HỢP ĐỒNG CUNG CẤP DỊCH VỤ</h2>
+        <p style="text-align: center; font-style: italic; margin-bottom: 1.5rem;">Số: ....../202.../HĐDV</p>
+        <p>Hôm nay, ngày ..... tháng ..... năm 202..., tại trụ sở Công ty, chúng tôi gồm có:</p>
+        <p><b>BÊN A (BÊN SỬ DỤNG DỊCH VỤ):</b></p>
+        <p>Đại diện bởi: ..................................................... Chức vụ: ...........................................</p>
+        <p>Địa chỉ: ............................................................. Mã số thuế: ......................................</p>
+        <p><b>BÊN B (BÊN CUNG CẤP DỊCH VỤ):</b></p>
+        <p>Đại diện bởi: ..................................................... Chức vụ: ...........................................</p>
+        <p>Địa chỉ: ............................................................. Mã số thuế: ......................................</p>
+        <p>Hai bên cùng thống nhất ký kết hợp đồng dịch vụ với các điều khoản sau:</p>
+        <p><b>Điều 1: Nội dung công việc và phạm vi thực hiện</b><br>Bên B cam kết cung cấp đầy đủ các dịch vụ theo tiêu chuẩn...</p>
+        <p><b>Điều 2: Giá trị hợp đồng và phương thức thanh toán</b><br>Tổng giá trị hợp đồng là: .............................. VNĐ. Thanh toán theo hình thức chuyển khoản.</p>
+        <div style="display: flex; justify-content: space-between; margin-top: 2.5rem;">
+          <div style="text-align: center;"><b>ĐẠI DIỆN BÊN A</b><br><br><br><br><i>(Ký tên và đóng dấu)</i></div>
+          <div style="text-align: center;"><b>ĐẠI DIỆN BÊN B</b><br><br><br><br><i>(Ký tên và đóng dấu)</i></div>
+        </div>
+        <p><br></p>
+      `;
+    } else if (type === 'bien_ban') {
+      templateHtml = `
+        <div style="text-align: center; font-weight: bold; margin-bottom: 1.5rem;">
+          <p style="font-size: 15px; margin: 0; text-transform: uppercase;">CÔNG TY / ĐƠN VỊ: ........................................</p>
+          <p style="font-size: 14px; margin: 4px 0 0 0;">PHÒNG BAN: .................................................</p>
+        </div>
+        <h2 style="text-align: center; margin: 1.5rem 0 1rem 0; font-size: 20px;">BIÊN BẢN CUỘC HỌP NỘI BỘ</h2>
+        <p><b>Thời gian:</b> ..... giờ ..... ngày ..... tháng ..... năm 202...</p>
+        <p><b>Địa điểm:</b> Phòng họp ..........................................................................................</p>
+        <p><b>Thành phần tham dự:</b><br>- Chủ tọa: ............................................................. Thư ký: .................................................<br>- Các thành viên tham dự: Đủ .../... thành viên.</p>
+        <p><b>Nội dung chính cuộc họp:</b><br>1. Đánh giá tiến độ công việc tuần qua.<br>2. Thảo luận các giải pháp tháo gỡ vướng mắc kỹ thuật.<br>3. Phân công nhiệm vụ tuần tiếp theo.</p>
+        <p>Cuộc họp kết thúc vào lúc ..... giờ cùng ngày. Biên bản đã được thông qua và nhất trí 100%.</p>
+        <div style="display: flex; justify-content: space-between; margin-top: 2.5rem;">
+          <div style="text-align: center;"><b>THƯ KÝ CUỘC HỌP</b><br><br><br><br><i>(Ký và ghi rõ họ tên)</i></div>
+          <div style="text-align: center;"><b>CHỦ TỌA</b><br><br><br><br><i>(Ký và ghi rõ họ tên)</i></div>
+        </div>
+        <p><br></p>
+      `;
+    }
+
+    if (templateHtml && this.editorEl) {
+      this.editorEl.innerHTML = templateHtml;
+      this.updateStats();
+    }
+  }
+
+  togglePrintPreview() {
+    if (window.sound) window.sound.click();
+    const container = document.querySelector('.word-editor-paper');
+    if (container) {
+      container.classList.toggle('word-print-preview-mode');
+    }
+  }
+
   updateStats() {
     if (!this.editorEl || !this.statsEl) return;
     const text = this.editorEl.innerText || '';

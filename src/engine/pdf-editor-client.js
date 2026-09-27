@@ -276,6 +276,143 @@ class PdfEditorClient {
     if (!bytes) return null;
     return new Blob([bytes], { type: 'application/pdf' });
   }
+
+  // 8. BATES PAGE NUMBERING
+  async addPageNumbers(format = 'Trang {page} / {total}', position = 'bottom-center') {
+    if (!this.pdfDoc) return;
+    const pages = this.pdfDoc.getPages();
+    const total = pages.length;
+
+    for (let i = 0; i < total; i++) {
+      const page = pages[i];
+      const pageNum = i + 1;
+      const text = format.replace('{page}', pageNum).replace('{total}', total);
+      const { width, height } = page.getSize();
+
+      const canvas = document.createElement('canvas');
+      canvas.width = 400;
+      canvas.height = 60;
+      const ctx = canvas.getContext('2d');
+      ctx.font = 'bold 20px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.fillStyle = '#475569';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, 200, 30);
+
+      const pngBytes = await fetch(canvas.toDataURL('image/png')).then(r => r.arrayBuffer());
+      const pngImg = await this.pdfDoc.embedPng(pngBytes);
+
+      const drawW = 120;
+      const drawH = (drawW / canvas.width) * canvas.height;
+      let x = (width - drawW) / 2;
+      let y = 20;
+
+      if (position === 'bottom-right') {
+        x = width - drawW - 30;
+      } else if (position === 'bottom-left') {
+        x = 30;
+      }
+
+      page.drawImage(pngImg, {
+        x: x,
+        y: y,
+        width: drawW,
+        height: drawH,
+        opacity: 0.9
+      });
+    }
+  }
+
+  // 9. PRESET OFFICIAL STAMPS
+  async addPresetStamp(stampType, pageIndex = this.currentPage) {
+    if (!this.pdfDoc) return;
+    const page = this.pdfDoc.getPage(pageIndex);
+    const { width, height } = page.getSize();
+
+    const stampConfigs = {
+      approved: {
+        text: 'ĐÃ DUYỆT',
+        sub: 'OFFFICE APPROVED',
+        color: '#10b981',
+        bg: 'rgba(16, 185, 129, 0.08)'
+      },
+      confidential: {
+        text: 'BẢO MẬT',
+        sub: 'CONFIDENTIAL',
+        color: '#ef4444',
+        bg: 'rgba(239, 68, 68, 0.08)'
+      },
+      draft: {
+        text: 'BẢN NHÁP',
+        sub: 'DRAFT COPY',
+        color: '#64748b',
+        bg: 'rgba(100, 116, 139, 0.08)'
+      },
+      paid: {
+        text: 'ĐÃ THANH TOÁN',
+        sub: 'PAID IN FULL',
+        color: '#0284c7',
+        bg: 'rgba(2, 132, 199, 0.08)'
+      }
+    };
+
+    const cfg = stampConfigs[stampType] || stampConfigs.approved;
+
+    const sCanvas = document.createElement('canvas');
+    sCanvas.width = 440;
+    sCanvas.height = 180;
+    const ctx = sCanvas.getContext('2d');
+
+    // Outer double border
+    ctx.strokeStyle = cfg.color;
+    ctx.lineWidth = 6;
+    ctx.fillStyle = cfg.bg;
+    ctx.beginPath();
+    ctx.roundRect(8, 8, 424, 164, 16);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.roundRect(16, 16, 408, 148, 10);
+    ctx.stroke();
+
+    // Main stamp text
+    ctx.font = '900 48px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.fillStyle = cfg.color;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(cfg.text, 220, 75);
+
+    // Subtitle
+    ctx.font = 'bold 20px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.fillText(cfg.sub, 220, 125);
+
+    const pngBytes = await fetch(sCanvas.toDataURL('image/png')).then(r => r.arrayBuffer());
+    const stampImg = await this.pdfDoc.embedPng(pngBytes);
+
+    const sW = 160;
+    const sH = (sW / sCanvas.width) * sCanvas.height;
+    page.drawImage(stampImg, {
+      x: width - sW - 40,
+      y: height - sH - 50,
+      width: sW,
+      height: sH,
+      opacity: 0.88,
+      rotate: PDFLib.degrees(-8)
+    });
+  }
+
+  // 10. CREATE BLANK A4 DOCUMENT
+  async createBlankDocument() {
+    this.pdfDoc = await PDFLib.PDFDocument.create();
+    this.pdfDoc.addPage([595.28, 841.89]); // Standard ISO A4
+    this.totalPages = 1;
+    this.currentPage = 0;
+    const bytes = await this.pdfDoc.save();
+    this.pdfBytes = bytes;
+    return bytes;
+  }
 }
 
 window.pdfEditorClient = new PdfEditorClient();

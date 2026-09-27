@@ -257,6 +257,10 @@
         </div>
 
         <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+          <button class="btn-secondary" onclick="window.createBlankPdf()" title="Tạo tài liệu PDF trắng A4 mới">
+            <i data-lucide="file-plus"></i>
+            <span>+ Tạo PDF Trắng A4</span>
+          </button>
           <label class="btn-secondary" style="cursor: pointer;">
             <i data-lucide="folder-open"></i>
             <span>Mở File PDF</span>
@@ -294,7 +298,7 @@
             <button class="btn-secondary" style="padding: 2px 6px; font-size: 0.72rem;" onclick="window.insertBlankPage()" title="Thêm trang trắng">+ Trang</button>
           </div>
           <div id="pdf-thumbs-list">
-            <p style="font-size: 0.8rem; color: var(--text-muted); text-align: center; padding: 2rem 0;">Chưa nạp file PDF</p>
+            <p style="font-size: 0.8rem; color: var(--text-muted); text-align: center; padding: 2rem 0;">Đang khởi tạo...</p>
           </div>
         </div>
 
@@ -319,6 +323,12 @@
               <button id="pdf-tool-rect" class="pdf-tool-btn" onclick="window.setPdfTool('rect')" title="Vẽ khung chữ nhật">
                 <i data-lucide="square"></i><span>Khung</span>
               </button>
+              <button id="pdf-tool-circle" class="pdf-tool-btn" onclick="window.setPdfTool('circle')" title="Vẽ hình elip / tròn">
+                <i data-lucide="circle"></i><span>Tròn</span>
+              </button>
+              <button id="pdf-tool-line" class="pdf-tool-btn" onclick="window.setPdfTool('line')" title="Vẽ đường thẳng">
+                <i data-lucide="minus"></i><span>Kẻ</span>
+              </button>
               <button id="pdf-tool-arrow" class="pdf-tool-btn" onclick="window.setPdfTool('arrow')" title="Vẽ mũi tên chỉ dẫn">
                 <i data-lucide="arrow-up-right"></i><span>Mũi tên</span>
               </button>
@@ -327,6 +337,9 @@
               </button>
               <button class="pdf-tool-btn" onclick="window.clearPageDrawings()" title="Xóa nét vẽ trên trang này">
                 <i data-lucide="eraser"></i><span>Tẩy nét</span>
+              </button>
+              <button id="pdf-grid-toggle" class="pdf-tool-btn" onclick="window.togglePdfGrid()" title="Bật/Tắt lưới căn chỉnh toạ độ">
+                <i data-lucide="grid"></i><span>Lưới</span>
               </button>
             </div>
 
@@ -341,14 +354,19 @@
               </select>
             </div>
 
-            <!-- Zoom and Page Telemetry -->
-            <div style="display: flex; gap: 6px; align-items: center; font-size: 0.8rem;">
-              <button class="pdf-tool-btn" id="pdf-toggle-night" onclick="window.togglePdfNightMode()" title="Chế độ đọc ban đêm"><i data-lucide="moon"></i></button>
+            <!-- Filters, Zoom and Page Telemetry -->
+            <div style="display: flex; gap: 6px; align-items: center; font-size: 0.8rem; flex-wrap: wrap;">
+              <select class="platform-select" style="padding: 2px 6px; font-size: 0.74rem;" onchange="window.setPdfFilter(this.value)" title="Bộ lọc hiển thị trang">
+                <option value="none">Bộ lọc: Chuẩn</option>
+                <option value="scan">Làm nét chữ (Scan)</option>
+                <option value="night">Bảo vệ mắt (Đêm)</option>
+                <option value="sepia">Giấy báo cũ (Sepia)</option>
+              </select>
               <button class="pdf-tool-btn" onclick="window.zoomPdf(-0.2)" title="Thu nhỏ"><i data-lucide="zoom-out"></i></button>
               <span id="pdf-zoom-val" style="color: var(--accent-cyan); font-weight: 600; min-width: 45px; text-align: center;">120%</span>
               <button class="pdf-tool-btn" onclick="window.zoomPdf(0.2)" title="Phóng to"><i data-lucide="zoom-in"></i></button>
               <span style="color: var(--border-subtle);">|</span>
-              <span>Trang: <b id="pdf-current-page-num" style="color: var(--accent-cyan);">0 / 0</b></span>
+              <span>Trang: <b id="pdf-current-page-num" style="color: var(--accent-cyan);">1 / 1</b></span>
             </div>
           </div>
 
@@ -383,6 +401,14 @@
                 <i data-lucide="arrow-down"></i><span>Di chuyển xuống</span>
               </button>
             </div>
+            <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
+              <button class="btn-secondary" style="flex: 1;" onclick="window.applyBatesNumbering()" title="Đánh số thứ tự toàn bộ trang">
+                <i data-lucide="hash"></i><span>Đánh số trang</span>
+              </button>
+              <button class="btn-secondary" style="flex: 1;" onclick="window.extractCurrentPageText()" title="Trích xuất toàn bộ chữ sang Clipboard">
+                <i data-lucide="copy"></i><span>Trích xuất chữ</span>
+              </button>
+            </div>
             <button class="btn-secondary" style="width: 100%; margin-top: 0.5rem; color: #f43f5e;" onclick="window.deleteCurrentPage()">
               <i data-lucide="trash-2"></i><span>Xóa trang hiện tại</span>
             </button>
@@ -399,16 +425,23 @@
                 <i data-lucide="pen-tool"></i>
                 <span>Ký Tên Điện Tử (Vẽ / Gõ / Tải Ảnh)</span>
               </button>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem;">
+                <button class="btn-secondary" style="padding: 5px; font-size: 0.74rem; color: #10b981;" onclick="window.applyPresetStamp('approved')">[ĐÃ DUYỆT]</button>
+                <button class="btn-secondary" style="padding: 5px; font-size: 0.74rem; color: #ef4444;" onclick="window.applyPresetStamp('confidential')">[BẢO MẬT]</button>
+                <button class="btn-secondary" style="padding: 5px; font-size: 0.74rem; color: #64748b;" onclick="window.applyPresetStamp('draft')">[BẢN NHÁP]</button>
+                <button class="btn-secondary" style="padding: 5px; font-size: 0.74rem; color: #0284c7;" onclick="window.applyPresetStamp('paid')">[ĐÃ THANH TOÁN]</button>
+              </div>
             </div>
           </div>
 
           <div class="tool-group">
-            <h4>Bảo Mật & Thông Tin</h4>
+            <h4>Bảo Mật & Tiêu Chuẩn</h4>
             <p style="font-size: 0.78rem; color: var(--text-muted); line-height: 1.5;">
-              Mọi chỉnh sửa được biên dịch trực tiếp thông qua chuẩn PDF-Lib và Canvas Vector Engine. Đảm bảo hỗ trợ 100% tiếng Việt có dấu, không lỗi WinAnsi.
+              Khổ chuẩn A4 (595×842 pt). Mọi chỉnh sửa được biên dịch trực tiếp qua Canvas Vector Engine & PDF-Lib. Hỗ trợ 100% tiếng Việt có dấu, zero lỗi encoding.
             </p>
           </div>
         </div>
+      </div>
       </div>
     </section>
 
@@ -478,6 +511,43 @@
               <option value="5">24px</option>
               <option value="6">32px</option>
             </select>
+            <select class="platform-select" style="padding: 2px 6px; font-size: 0.76rem;" onchange="window.wordStudio.setLineSpacing(this.value)" title="Khoảng cách dòng">
+              <option value="1.5">Giãn dòng: 1.5</option>
+              <option value="1.0">1.0 (Đơn)</option>
+              <option value="1.15">1.15</option>
+              <option value="2.0">2.0 (Đôi)</option>
+            </select>
+          </div>
+
+          <div class="toolbar-group">
+            <select class="platform-select" style="padding: 2px 6px; font-size: 0.76rem;" onchange="if(this.value){window.wordStudio.insertAdministrativeTemplate(this.value); this.value='';}" title="Chèn văn bản hành chính Việt Nam mẫu">
+              <option value="">+ Mẫu văn bản chuẩn...</option>
+              <option value="don_xin_phep">Đơn xin phép / Đề nghị</option>
+              <option value="hop_dong">Hợp đồng dịch vụ</option>
+              <option value="bien_ban">Biên bản cuộc họp</option>
+            </select>
+            <select class="platform-select" style="padding: 2px 6px; font-size: 0.76rem;" onchange="if(this.value){window.wordStudio.insertCalloutBlock(this.value); this.value='';}" title="Chèn hộp ghi chú / trích dẫn">
+              <option value="">+ Hộp ghi chú...</option>
+              <option value="quote">Khối trích dẫn</option>
+              <option value="info">Hộp thông tin</option>
+              <option value="warning">Hộp cảnh báo</option>
+              <option value="success">Hộp thành công</option>
+            </select>
+            <select class="platform-select" style="padding: 2px 6px; font-size: 0.76rem;" onchange="if(this.value){window.wordStudio.insertSymbol(this.value); this.value='';}" title="Chèn ký tự đặc biệt & toán học">
+              <option value="">Ký hiệu...</option>
+              <option value="✓">✓ Tích</option>
+              <option value="★">★ Sao</option>
+              <option value="→">→</option>
+              <option value="±">±</option>
+              <option value="≤">≤</option>
+              <option value="≥">≥</option>
+              <option value="≠">≠</option>
+              <option value="×">×</option>
+              <option value="÷">÷</option>
+              <option value="π">π</option>
+              <option value="α">α</option>
+              <option value="β">β</option>
+            </select>
           </div>
 
           <div class="toolbar-group">
@@ -491,6 +561,7 @@
             <button class="tool-btn" onclick="window.wordStudio.exec('italic')" title="In nghiêng (Ctrl+I)"><i>I</i></button>
             <button class="tool-btn" onclick="window.wordStudio.exec('underline')" title="Gạch chân (Ctrl+U)"><u>U</u></button>
             <button class="tool-btn" onclick="window.wordStudio.exec('strikeThrough')" title="Gạch ngang"><s>S</s></button>
+            <button class="tool-btn" onclick="window.wordStudio.clearFormatting()" title="Xóa toàn bộ định dạng"><i data-lucide="remove-formatting"></i></button>
           </div>
 
           <!-- Color Pickers -->
@@ -588,6 +659,17 @@
       <div class="sheet-studio-wrap">
         <!-- Quick Formula & Formatting Bar -->
         <div style="display: flex; gap: 0.35rem; flex-wrap: wrap; align-items: center; background: rgba(22, 33, 58, 0.85); padding: 0.5rem 0.75rem; border-radius: 8px 8px 0 0; border: 1px solid var(--border-subtle);">
+          <select class="platform-select" style="padding: 3px 6px; font-size: 0.76rem;" onchange="if(this.value){window.sheetStudio.insertSheetTemplate(this.value); this.value='';}">
+            <option value="">+ Mẫu bảng tính...</option>
+            <option value="bang_luong">Bảng tính lương</option>
+            <option value="thu_chi">Báo cáo thu chi</option>
+            <option value="ke_hoach">Kế hoạch tài chính</option>
+          </select>
+          <button class="btn-secondary" style="padding: 4px 7px; font-size: 0.75rem;" onclick="window.sheetStudio.autoNumberSTT()" title="Tự động đánh số thứ tự">STT 1..N</button>
+          <button class="btn-secondary" style="padding: 4px 7px; font-size: 0.75rem;" onclick="window.sheetStudio.applyConditionalFormatting()" title="Tô màu có điều kiện (Đỏ: âm, Xanh: lớn nhất)">Tô Màu</button>
+          <button class="btn-primary" style="padding: 4px 9px; font-size: 0.75rem;" onclick="window.sheetStudio.renderChartModal()" title="Vẽ biểu đồ cột trực quan"><i data-lucide="bar-chart-2"></i><span>Biểu Đồ</span></button>
+
+          <span style="color: var(--border-subtle); margin: 0 2px;">|</span>
           <button class="btn-secondary" style="padding: 4px 8px; font-size: 0.76rem;" onclick="window.sheetStudio.addRow()">+ Hàng</button>
           <button class="btn-secondary" style="padding: 4px 8px; font-size: 0.76rem;" onclick="window.sheetStudio.deleteActiveRow()" title="Xóa hàng đang chọn">- Hàng</button>
           <button class="btn-secondary" style="padding: 4px 8px; font-size: 0.76rem;" onclick="window.sheetStudio.addCol()">+ Cột</button>
@@ -933,6 +1015,25 @@
           <i data-lucide="x"></i>
           <span>Thoát (Esc)</span>
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Excel Data Chart -->
+  <div id="sheet-chart-modal" class="modal-overlay hidden">
+    <div class="modal-card" style="max-width: 650px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h3 style="font-size: 1.15rem; display: flex; align-items: center; gap: 8px;">
+          <i data-lucide="bar-chart-2" style="color: #38bdf8;"></i>
+          Biểu Đồ Trực Quan Bảng Tính
+        </h3>
+        <button class="tool-btn" onclick="document.getElementById('sheet-chart-modal').classList.add('hidden')">×</button>
+      </div>
+      <div style="background: #0f172a; border-radius: 8px; padding: 12px; display: flex; justify-content: center; border: 1px solid var(--border-subtle); margin-bottom: 1rem;">
+        <canvas id="sheet-chart-canvas" width="600" height="340" style="max-width: 100%; height: auto;"></canvas>
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 0.6rem;">
+        <button class="btn-secondary" onclick="document.getElementById('sheet-chart-modal').classList.add('hidden')">Đóng</button>
       </div>
     </div>
   </div>
