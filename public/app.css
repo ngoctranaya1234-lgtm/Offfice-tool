@@ -43,7 +43,7 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-body {
+html, body {
   font-family: var(--font-sans);
   background-color: var(--bg-void);
   color: var(--text-main);
@@ -51,6 +51,8 @@ body {
   display: flex;
   flex-direction: column;
   overflow-x: hidden;
+  max-width: 100vw;
+  width: 100%;
   background-image: 
     radial-gradient(circle at 15% 10%, rgba(14, 165, 233, 0.08) 0%, transparent 40%),
     radial-gradient(circle at 85% 85%, rgba(16, 185, 129, 0.06) 0%, transparent 45%);
@@ -203,6 +205,10 @@ body {
 @keyframes pulse-dot {
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.4; transform: scale(0.85); }
+}
+
+.server-text-short {
+  display: none;
 }
 
 .control-btn {
@@ -1034,7 +1040,7 @@ body {
 }
 
 /* ==========================================================================
-   PLATFORM MODES (Auto, iOS Cupertino, Android Material You)
+   PLATFORM MODES: ANDROID MATERIAL YOU 3 & IOS CUPERTINO
    ========================================================================== */
 
 /* iOS Cupertino Mode */
@@ -1042,7 +1048,7 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", sans-serif;
 }
 .platform-ios .app-header {
-  padding-top: calc(0.75rem + env(safe-area-inset-top, 0px));
+  padding-top: calc(0.6rem + env(safe-area-inset-top, 0px));
 }
 .platform-ios .surface-card {
   border-radius: 18px;
@@ -1051,27 +1057,69 @@ body {
 .platform-ios .btn-primary {
   border-radius: 12px;
 }
+.platform-ios .btn-secondary {
+  border-radius: 12px;
+}
 .platform-ios .mobile-nav-bar {
   padding-bottom: env(safe-area-inset-bottom, 12px);
   height: calc(64px + env(safe-area-inset-bottom, 12px));
 }
 
-/* Android Material Mode */
+/* Android Material You 3 Mode (M3) */
 .platform-android {
-  font-family: Roboto, "Google Sans", sans-serif;
-}
-.platform-android .nav-tab {
-  border-radius: 999px;
+  font-family: "Google Sans", Roboto, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
 }
 .platform-android .surface-card {
   border-radius: 24px;
+  background: rgba(16, 24, 40, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
 }
 .platform-android .btn-primary {
   border-radius: 999px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  min-height: 46px;
+  box-shadow: 0 4px 14px rgba(14, 165, 233, 0.35);
+}
+.platform-android .btn-secondary {
+  border-radius: 999px;
+  min-height: 42px;
+}
+.platform-android .convert-card {
+  border-radius: 20px;
+}
+.platform-android .dropzone {
+  border-radius: 24px;
+}
+.platform-android .file-action-card {
+  border-radius: 20px;
+  background: rgba(22, 33, 58, 0.7);
+  border: 1px solid rgba(56, 189, 248, 0.25);
 }
 
-/* Responsive Breakpoints */
-@media (max-width: 900px) {
+/* Material You 3 Active Pill Indicator */
+.platform-android .mobile-nav-bar {
+  background: rgba(10, 15, 28, 0.96);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  height: 68px;
+}
+.platform-android .mobile-nav-bar .mobile-nav-item.active {
+  color: #38bdf8;
+}
+.platform-android .mobile-nav-bar .mobile-nav-item.active i {
+  background: rgba(14, 165, 233, 0.2);
+  border-radius: 16px;
+  padding: 4px 16px;
+  box-sizing: content-box;
+}
+
+/* ==========================================================================
+   RESPONSIVE LAYOUT ENGINE (Auto-tuned for Android, iOS & Tablets)
+   ========================================================================== */
+
+/* Tablet & Large Mobile (<= 860px) */
+@media (max-width: 860px) {
   .app-header .main-nav {
     display: none;
   }
@@ -1079,19 +1127,229 @@ body {
     display: flex;
   }
   .app-main {
-    padding-bottom: 80px;
+    padding: 1rem 0.85rem 85px;
   }
+  .surface-card {
+    padding: 1.25rem 1rem;
+    border-radius: 16px;
+  }
+  .convert-grid {
+    grid-template-columns: 1fr;
+    gap: 0.85rem;
+    margin-bottom: 1.25rem;
+  }
+
+  /* PDF Studio Layout on Mobile/Tablet */
   .pdf-studio-layout {
-    grid-template-columns: 1fr;
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
   }
+  .pdf-viewport-pane {
+    order: 1;
+    padding: 0.85rem;
+    min-height: 380px;
+  }
+  .pdf-thumbs-pane {
+    order: 2;
+    max-height: 140px;
+    flex-direction: row;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+  .pdf-thumbs-pane #pdf-thumbs-list {
+    display: flex;
+    flex-direction: row;
+    gap: 8px;
+  }
+  .pdf-tools-pane {
+    order: 3;
+    padding: 0.85rem;
+  }
+
+  /* Slides Studio Layout on Mobile/Tablet */
   .slides-layout {
-    grid-template-columns: 1fr;
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+  }
+  .slide-stage-wrap {
+    order: 1;
+    padding: 0.85rem;
+  }
+  .slides-sidebar {
+    order: 2;
   }
   .slide-canvas {
-    width: 100%;
-    height: 240px;
+    width: 100% !important;
+    height: auto !important;
+    aspect-ratio: 16 / 9;
   }
   .word-canvas-sheet {
-    padding: 1.5rem;
+    padding: 1.25rem 1rem;
+    min-height: 520px;
   }
 }
+
+/* Mobile Screens (<= 640px - Native Android & iPhone Viewports) */
+@media (max-width: 640px) {
+  html, body {
+    overflow-x: hidden;
+    max-width: 100vw;
+  }
+
+  /* Compact Top Header */
+  .app-header {
+    padding: 0.5rem 0.75rem;
+    gap: 0.35rem;
+  }
+  .brand {
+    gap: 0.45rem;
+    flex-shrink: 0;
+  }
+  .brand-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 0.95rem;
+    border-radius: 8px;
+  }
+  .brand-text h1 {
+    font-size: 1rem;
+    white-space: nowrap;
+  }
+  .brand-text p {
+    display: none; /* Hide subtitle to preserve header width */
+  }
+
+  /* Header Actions Compact Grid */
+  .header-actions {
+    gap: 0.35rem;
+    flex-shrink: 1;
+    min-width: 0;
+    justify-content: flex-end;
+  }
+
+  /* Status Pill Compact */
+  .status-pill {
+    padding: 3px 8px;
+    font-size: 0.7rem;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+  .server-text-full {
+    display: none !important;
+  }
+  .server-text-short {
+    display: inline !important;
+  }
+
+  /* Platform Selector Auto-Fit */
+  .platform-select {
+    padding: 4px 6px;
+    font-size: 0.72rem;
+    max-width: 125px;
+    min-width: 0;
+    flex-shrink: 1;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+
+  /* Mute Button Compact Icon */
+  .control-btn {
+    padding: 4px 8px;
+    min-width: 32px;
+    height: 32px;
+    justify-content: center;
+  }
+  .mute-btn-text {
+    display: none !important;
+  }
+
+  /* Main Workspace Padding */
+  .app-main {
+    padding: 0.75rem 0.65rem 85px;
+    max-width: 100vw;
+  }
+  .surface-card {
+    padding: 1rem 0.75rem;
+    border-radius: 16px;
+  }
+
+  /* Dropzone Compact */
+  .dropzone {
+    padding: 1.4rem 0.85rem;
+  }
+  .dropzone-icon {
+    width: 50px;
+    height: 50px;
+    font-size: 1.35rem;
+  }
+  .dropzone-text h3 {
+    font-size: 0.92rem;
+    margin-bottom: 0.25rem;
+  }
+  .dropzone-text p {
+    font-size: 0.74rem;
+  }
+
+  /* File Action Cards - ZERO CLIPPING GUARANTEED ON ANDROID */
+  .file-action-card {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.75rem;
+    padding: 0.85rem 1rem;
+    margin-top: 1rem;
+  }
+  .file-info {
+    width: 100%;
+    min-width: 0;
+    gap: 0.75rem;
+  }
+  .file-meta {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+  }
+  .file-meta h4 {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 0.88rem;
+    max-width: 100%;
+  }
+  .file-meta p {
+    font-size: 0.72rem;
+  }
+  .file-action-card .btn-primary {
+    width: 100% !important;
+    justify-content: center !important;
+    padding: 0.75rem 1rem !important;
+    min-height: 46px !important;
+    font-size: 0.92rem !important;
+    box-sizing: border-box;
+  }
+
+  /* Word Studio Ribbon Toolbar */
+  .ribbon-toolbar {
+    padding: 0.35rem;
+    gap: 2px;
+    overflow-x: auto;
+  }
+  .toolbar-group {
+    padding-right: 2px;
+    gap: 2px;
+  }
+  .tool-btn {
+    width: 28px;
+    height: 28px;
+    font-size: 0.8rem;
+  }
+
+  /* Modal Dialogs */
+  .modal-card {
+    padding: 1.25rem 1rem;
+    width: 95%;
+  }
+}
+

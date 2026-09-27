@@ -65,8 +65,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const updateMuteUI = () => {
       const isMuted = window.sound.isMuted();
       muteBtn.innerHTML = isMuted ? 
-        '<i data-lucide="volume-x"></i><span>Bật âm</span>' : 
-        '<i data-lucide="volume-2"></i><span>Tắt âm</span>';
+        '<i data-lucide="volume-x"></i><span class="mute-btn-text">Bật âm</span>' : 
+        '<i data-lucide="volume-2"></i><span class="mute-btn-text">Tắt âm</span>';
       if (window.lucide) window.lucide.createIcons();
     };
     updateMuteUI();

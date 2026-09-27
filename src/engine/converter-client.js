@@ -31,10 +31,10 @@ class ConverterClient {
     if (el) {
       if (online) {
         el.className = 'status-pill status-server-on';
-        el.innerHTML = '<span class="status-dot"></span><span>Desktop Engine (Siêu Tốc)</span>';
+        el.innerHTML = '<span class="status-dot"></span><span class="server-text-full">Desktop Engine (Siêu Tốc)</span><span class="server-text-short">Desktop</span>';
       } else {
         el.className = 'status-pill status-server-client';
-        el.innerHTML = '<span class="status-dot"></span><span>Client PWA Engine (Web/Mobile)</span>';
+        el.innerHTML = '<span class="status-dot"></span><span class="server-text-full">Client PWA Engine (Web/Mobile)</span><span class="server-text-short">PWA</span>';
       }
     }
   }
