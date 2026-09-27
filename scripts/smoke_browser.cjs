@@ -6,6 +6,8 @@ const { tmpdir } = require('node:os');
 const { join } = require('node:path');
 
 const chrome = process.env.CHROME_PATH || (process.platform === 'win32' ? 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe' : 'google-chrome');
+const urlArg = process.argv.find(value => value.startsWith('--url='));
+const appUrl = (urlArg ? urlArg.slice(6) : 'http://127.0.0.1:4000').replace(/\/$/, '');
 const profile = mkdtempSync(join(tmpdir(), 'offfice-smoke-'));
 const browser = spawn(chrome, ['--headless=new', '--disable-gpu', '--no-sandbox', '--disable-extensions', '--remote-debugging-port=0', `--user-data-dir=${profile}`, 'about:blank'], { stdio: 'ignore', windowsHide: true });
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -48,7 +50,7 @@ async function main() {
   }
   await send('Runtime.enable');
   await send('Page.enable');
-  await send('Page.navigate', { url: 'http://127.0.0.1:4000/#workspace' });
+  await send('Page.navigate', { url: `${appUrl}/#workspace` });
   await pause(2500);
   const status = await evaluate("document.getElementById('workspace-save-status').textContent");
   assert.equal(status, 'Tự lưu đã bật', `Workspace did not initialize: ${status}`);
