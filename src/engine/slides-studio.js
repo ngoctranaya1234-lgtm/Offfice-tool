@@ -11,28 +11,13 @@ class SlidesStudio {
     this.canvasEl = document.getElementById(canvasId);
     this.thumbListEl = document.getElementById(thumbListId);
 
-    // Initial default slides
+    // Start with a clean blank presentation slide (no demo/mock content)
     this.slides = [
       {
         id: 's1',
         theme: 'dark-cyber',
         bg: '#0f172a',
-        elements: [
-          { type: 'heading', text: 'OFFFICE TOOL PRO', x: 80, y: 140, size: 36, color: '#38bdf8', bold: true },
-          { type: 'subheading', text: 'Bo Cong Cu Van Phong Da Nen Tang & Sieu Toc', x: 80, y: 200, size: 20, color: '#94a3b8' },
-          { type: 'badge', text: 'Chuyen Doi Word • PDF • Excel', x: 80, y: 260, size: 14, color: '#10b981', bg: 'rgba(16, 185, 129, 0.15)' }
-        ]
-      },
-      {
-        id: 's2',
-        theme: 'emerald',
-        bg: '#064e3b',
-        elements: [
-          { type: 'heading', text: 'TINH NANG DOT PHA', x: 80, y: 100, size: 30, color: '#34d399', bold: true },
-          { type: 'text', text: '• Chuyen doi 2 chieu Word sang PDF & PDF sang Word', x: 80, y: 170, size: 18, color: '#e2e8f0' },
-          { type: 'text', text: '• Trich xuat bang bieu PDF thanh Excel chinh xac', x: 80, y: 220, size: 18, color: '#e2e8f0' },
-          { type: 'text', text: '• Chinh sua PDF: Chu ky, Dong dau, Ghep / Tach trang', x: 80, y: 270, size: 18, color: '#e2e8f0' }
-        ]
+        elements: []
       }
     ];
 
@@ -50,10 +35,7 @@ class SlidesStudio {
       id: 's_' + Date.now(),
       theme: 'dark-cyber',
       bg: '#0f172a',
-      elements: [
-        { type: 'heading', text: 'Tieu de Slide moi', x: 80, y: 120, size: 32, color: '#f8fafc', bold: true },
-        { type: 'text', text: 'Nhap noi dung thuyet trinh tai day...', x: 80, y: 180, size: 18, color: '#94a3b8' }
-      ]
+      elements: []
     };
     this.slides.push(newSlide);
     this.currentSlideIndex = this.slides.length - 1;
@@ -130,8 +112,15 @@ class SlidesStudio {
     const slide = this.getCurrentSlide();
     if (!slide) return;
 
-    this.canvasEl.style.backgroundColor = slide.bg;
-    let html = '';
+    if (slide.elements.length === 0) {
+      this.canvasEl.innerHTML = `
+        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: var(--text-muted); opacity: 0.6; pointer-events: none; user-select: none;">
+          <p style="font-size: 1.05rem; margin-bottom: 0.4rem; font-weight: 500;">Trang trình chiếu trống</p>
+          <span style="font-size: 0.8rem;">Bấm "+ Tiêu Đề", "+ Đoạn Văn" hoặc "+ Nhãn Nổi Bật" ở trên để bắt đầu</span>
+        </div>
+      `;
+      return;
+    }
 
     slide.elements.forEach((el, idx) => {
       let extra = '';

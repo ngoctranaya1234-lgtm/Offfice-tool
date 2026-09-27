@@ -492,7 +492,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       const size = parseInt(document.getElementById('wm-img-size').value, 10);
       await window.pdfEditorClient.addWatermarkImage(buf, { opacity, width: size, height: size });
     } else {
-      const text = document.getElementById('wm-text-input').value || 'BẢN QUYỀN';
+      const text = document.getElementById('wm-text-input').value.trim();
+      if (!text) {
+        alert('Vui lòng nhập nội dung chữ đóng dấu.');
+        return;
+      }
       const opacity = parseFloat(document.getElementById('wm-opacity-slider').value);
       const color = document.getElementById('wm-color-picker').value;
       const angle = parseInt(document.getElementById('wm-angle-select').value, 10);
@@ -559,8 +563,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   };
 
   window.updateCalligraphyPreview = function() {
-    const val = document.getElementById('sig-type-input').value || 'Chữ Ký';
-    document.getElementById('sig-calligraphy-preview').innerText = val;
+    const val = (document.getElementById('sig-type-input').value || '').trim();
+    const previewEl = document.getElementById('sig-calligraphy-preview');
+    if (!val) {
+      previewEl.innerText = 'Chữ ký mẫu sẽ hiển thị tại đây khi bạn nhập họ tên';
+      previewEl.style.fontSize = '1rem';
+      previewEl.style.color = 'var(--text-muted)';
+      previewEl.style.fontStyle = 'italic';
+    } else {
+      previewEl.innerText = val;
+      previewEl.style.fontSize = '2.2rem';
+      previewEl.style.color = '#0f172a';
+      previewEl.style.fontStyle = 'normal';
+    }
   };
 
   window.clearSignature = function() {
@@ -580,7 +595,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (!sigCanvas) return;
       sigDataUrl = sigCanvas.toDataURL('image/png');
     } else if (activeSigTab === 'type') {
-      const text = document.getElementById('sig-type-input').value || 'Chữ ký';
+      const text = (document.getElementById('sig-type-input').value || '').trim();
+      if (!text) {
+        alert('Vui lòng nhập họ tên chữ ký.');
+        return;
+      }
       const cCanvas = document.createElement('canvas');
       cCanvas.width = 460;
       cCanvas.height = 140;
@@ -697,7 +716,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   window.executeSplitPdf = async function() {
     const rangeStr = document.getElementById('split-range-input').value.trim();
-    if (!rangeStr) return;
+    if (!rangeStr) {
+      alert('Vui lòng nhập dải trang cần tách (Ví dụ: 1-3, 5).');
+      return;
+    }
 
     // Parse ranges like "1-3, 5" -> [0, 1, 2, 4]
     const indices = [];

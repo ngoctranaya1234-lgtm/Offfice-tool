@@ -748,6 +748,15 @@ body {
   font-size: 11pt;
   line-height: 1.6;
   outline: none;
+  position: relative;
+}
+
+.word-canvas-sheet:empty::before {
+  content: attr(data-placeholder);
+  color: #94a3b8;
+  font-style: italic;
+  pointer-events: none;
+  display: block;
 }
 
 .doc-table {

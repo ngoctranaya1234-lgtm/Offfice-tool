@@ -24,21 +24,7 @@ class SheetStudio {
       this.data.push(row);
     }
 
-    // Default sample data
-    this.data[0] = ['Sản phẩm', 'Số lượng', 'Đơn giá (VND)', 'Thành tiền', 'Ghi chú'];
-    this.data[1] = ['Offfice tool Pro License', 5, 2500000, '=B2*C2', 'Đã thanh toán'];
-    this.data[2] = ['Bộ chuyển đổi PDF-Word-Excel', 12, 850000, '=B3*C3', 'Ưu đãi'];
-    this.data[3] = ['Cloud Document Sync', 20, 300000, '=B4*C4', 'Thường niên'];
-    this.data[4] = ['TỔNG CỘNG', '', '', '=SUM(D2:D4)', 'Hoàn tất'];
-
-    this.styles['0_0'] = { bold: true };
-    this.styles['0_1'] = { bold: true };
-    this.styles['0_2'] = { bold: true };
-    this.styles['0_3'] = { bold: true };
-    this.styles['0_4'] = { bold: true };
-    this.styles['4_0'] = { bold: true, color: '#10b981' };
-    this.styles['4_3'] = { bold: true, color: '#10b981' };
-
+    // Clean empty spreadsheet ready for user file or input
     this.renderGrid();
     this._bindEvents();
   }

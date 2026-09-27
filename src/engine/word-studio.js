@@ -114,7 +114,12 @@ class WordStudio {
     const children = [];
 
     // Parse paragraphs from editor
-    const nodes = this.editorEl.children;
+    let nodes = Array.from(this.editorEl.children);
+    if (nodes.length === 0 && this.editorEl.innerText.trim()) {
+      const p = document.createElement('p');
+      p.innerText = this.editorEl.innerText.trim();
+      nodes = [p];
+    }
     for (let i = 0; i < nodes.length; i++) {
       const node = nodes[i];
       const text = node.innerText.trim();
@@ -184,7 +189,12 @@ class WordStudio {
       curY = MARGIN;
     }
 
-    const nodes = this.editorEl.children;
+    let nodes = Array.from(this.editorEl.children);
+    if (nodes.length === 0 && this.editorEl.innerText.trim()) {
+      const p = document.createElement('p');
+      p.innerText = this.editorEl.innerText.trim();
+      nodes = [p];
+    }
     for (let i = 0; i < nodes.length; i++) {
       const node = nodes[i];
       const text = node.innerText.trim();
