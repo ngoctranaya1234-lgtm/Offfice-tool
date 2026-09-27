@@ -278,6 +278,8 @@ class SheetStudio {
         el.classList.remove('cell-active');
       }
     });
+
+    this.updateStatusBar(r, c);
   }
 
   setCellValue(r, c, value) {
@@ -293,6 +295,7 @@ class SheetStudio {
       this.data[r][c] = value;
     }
     this.renderGrid();
+    this.updateStatusBar(r, c);
   }
 
   toggleStyle(prop, val) {
@@ -321,6 +324,82 @@ class SheetStudio {
       this.data[r].push('');
     }
     this.renderGrid();
+  }
+
+  deleteActiveRow() {
+    if (this.rows <= 1) return;
+    if (window.sound) window.sound.click();
+    this.data.splice(this.activeCell.r, 1);
+    this.rows--;
+    if (this.activeCell.r >= this.rows) {
+      this.activeCell.r = this.rows - 1;
+    }
+    this.renderGrid();
+    this.selectCell(this.activeCell.r, this.activeCell.c);
+  }
+
+  deleteActiveCol() {
+    if (this.cols <= 1) return;
+    if (window.sound) window.sound.click();
+    for (let r = 0; r < this.rows; r++) {
+      if (this.data[r]) {
+        this.data[r].splice(this.activeCell.c, 1);
+      }
+    }
+    this.cols--;
+    if (this.activeCell.c >= this.cols) {
+      this.activeCell.c = this.cols - 1;
+    }
+    this.renderGrid();
+    this.selectCell(this.activeCell.r, this.activeCell.c);
+  }
+
+  formatActiveCell(type) {
+    if (window.sound) window.sound.click();
+    const { r, c } = this.activeCell;
+    const currentVal = this.data[r]?.[c];
+    if (currentVal === undefined || currentVal === '') return;
+
+    const num = Number(String(currentVal).replace(/[^0-9.-]+/g, ''));
+    if (isNaN(num)) return;
+
+    if (type === 'vnd') {
+      this.data[r][c] = num.toLocaleString('vi-VN') + ' ₫';
+    } else if (type === 'usd') {
+      this.data[r][c] = '$' + num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    } else if (type === 'percent') {
+      this.data[r][c] = (num >= 1 ? num : num * 100).toFixed(1) + '%';
+    } else if (type === 'decimal') {
+      this.data[r][c] = num.toFixed(2);
+    }
+    this.renderGrid();
+    this.selectCell(r, c);
+  }
+
+  updateStatusBar(r = this.activeCell.r, c = this.activeCell.c) {
+    const colName = this._colName(c);
+    const infoEl = document.getElementById('sheet-cell-info');
+    const sumEl = document.getElementById('sheet-stat-sum');
+    const avgEl = document.getElementById('sheet-stat-avg');
+    const countEl = document.getElementById('sheet-stat-count');
+    if (!infoEl || !sumEl || !avgEl || !countEl) return;
+
+    infoEl.innerHTML = `Ô: <b style="color: #38bdf8;">${this._cellRef(r, c)}</b> (Cột ${colName})`;
+
+    let sum = 0, count = 0;
+    for (let rowIdx = 0; rowIdx < this.rows; rowIdx++) {
+      const raw = this.data[rowIdx]?.[c];
+      const evaluated = this.evaluateCell(raw);
+      const val = Number(evaluated);
+      if (!isNaN(val) && raw !== '' && raw !== null && raw !== undefined) {
+        sum += val;
+        count++;
+      }
+    }
+    const avg = count > 0 ? (sum / count) : 0;
+    sumEl.innerText = sum.toLocaleString('vi-VN');
+    avgEl.innerText = count > 0 ? (Number.isInteger(avg) ? avg : avg.toFixed(2)) : '0';
+    countEl.innerText = count;
   }
 
   async exportXlsx(filename = 'Bang_tinh.xlsx') {

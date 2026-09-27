@@ -381,6 +381,56 @@ class WordStudio {
     this.updateStats();
     return count;
   }
+
+  printDocument() {
+    if (window.sound) window.sound.click();
+    const content = this.editorEl ? this.editorEl.innerHTML : '';
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      window.print();
+      return;
+    }
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <title>In Tài Liệu - Offfice tool</title>
+        <style>
+          @page { size: A4; margin: 20mm; }
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Times New Roman", serif; font-size: 14pt; line-height: 1.6; color: #000; background: #fff; padding: 10px; }
+          table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+          th, td { border: 1px solid #333; padding: 8px 12px; text-align: left; }
+          th { background: #f0f0f0; }
+          img { max-width: 100%; height: auto; }
+        </style>
+      </head>
+      <body>
+        ${content}
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+      printWindow.close();
+    }, 400);
+  }
+
+  toggleZenMode() {
+    if (window.sound) window.sound.tabSwitch();
+    const wrap = document.querySelector('.word-editor-container');
+    if (wrap) {
+      wrap.classList.toggle('zen-mode-active');
+      const isZen = wrap.classList.contains('zen-mode-active');
+      const btn = document.getElementById('word-zen-btn');
+      if (btn) {
+        btn.classList.toggle('active', isZen);
+        btn.title = isZen ? 'Thoát toàn màn hình (Esc)' : 'Soạn thảo toàn màn hình (Zen Mode)';
+      }
+    }
+  }
 }
 
 window.wordStudio = new WordStudio();

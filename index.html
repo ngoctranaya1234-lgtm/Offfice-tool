@@ -443,6 +443,14 @@
             <i data-lucide="code"></i>
             <span>Xuất .html</span>
           </button>
+          <button class="btn-secondary" onclick="window.wordStudio.printDocument()" title="In văn bản">
+            <i data-lucide="printer"></i>
+            <span>In</span>
+          </button>
+          <button id="word-zen-btn" class="btn-secondary" onclick="window.wordStudio.toggleZenMode()" title="Soạn thảo toàn màn hình">
+            <i data-lucide="maximize"></i>
+            <span>Toàn Màn Hình</span>
+          </button>
           <button class="btn-primary" onclick="window.wordStudio.exportPdf()">
             <i data-lucide="download"></i>
             <span>Xuất sang PDF</span>
@@ -579,14 +587,23 @@
 
       <div class="sheet-studio-wrap">
         <!-- Quick Formula & Formatting Bar -->
-        <div style="display: flex; gap: 0.4rem; flex-wrap: wrap; align-items: center; background: rgba(22, 33, 58, 0.85); padding: 0.5rem 0.75rem; border-radius: 8px; border: 1px solid var(--border-subtle);">
+        <div style="display: flex; gap: 0.35rem; flex-wrap: wrap; align-items: center; background: rgba(22, 33, 58, 0.85); padding: 0.5rem 0.75rem; border-radius: 8px 8px 0 0; border: 1px solid var(--border-subtle);">
           <button class="btn-secondary" style="padding: 4px 8px; font-size: 0.76rem;" onclick="window.sheetStudio.addRow()">+ Hàng</button>
+          <button class="btn-secondary" style="padding: 4px 8px; font-size: 0.76rem;" onclick="window.sheetStudio.deleteActiveRow()" title="Xóa hàng đang chọn">- Hàng</button>
           <button class="btn-secondary" style="padding: 4px 8px; font-size: 0.76rem;" onclick="window.sheetStudio.addCol()">+ Cột</button>
+          <button class="btn-secondary" style="padding: 4px 8px; font-size: 0.76rem;" onclick="window.sheetStudio.deleteActiveCol()" title="Xóa cột đang chọn">- Cột</button>
+
+          <span style="color: var(--border-subtle); margin: 0 2px;">|</span>
           <button class="tool-btn" onclick="window.sheetStudio.toggleStyle('bold')" title="In đậm"><b>B</b></button>
           <button class="tool-btn" onclick="window.sheetStudio.toggleStyle('italic')" title="In nghiêng"><i>I</i></button>
           <button class="tool-btn" onclick="window.sheetStudio.toggleStyle('color', '#10b981')" title="Màu xanh"><span style="color:#10b981;">A</span></button>
           <button class="tool-btn" onclick="window.sheetStudio.toggleStyle('color', '#38bdf8')" title="Màu xanh dương"><span style="color:#38bdf8;">A</span></button>
           <button class="tool-btn" onclick="window.sheetStudio.toggleStyle('color', '#f8fafc')" title="Mặc định">A</button>
+
+          <span style="color: var(--border-subtle); margin: 0 2px;">|</span>
+          <button class="btn-secondary" style="padding: 4px 6px; font-size: 0.75rem;" onclick="window.sheetStudio.formatActiveCell('vnd')" title="Định dạng tiền tệ VNĐ">₫</button>
+          <button class="btn-secondary" style="padding: 4px 6px; font-size: 0.75rem;" onclick="window.sheetStudio.formatActiveCell('usd')" title="Định dạng Đô la Mỹ USD">$</button>
+          <button class="btn-secondary" style="padding: 4px 6px; font-size: 0.75rem;" onclick="window.sheetStudio.formatActiveCell('percent')" title="Định dạng phần trăm">%</button>
 
           <span style="color: var(--border-subtle); margin: 0 2px;">|</span>
           <button class="btn-secondary" style="padding: 4px 7px; font-size: 0.75rem;" onclick="window.sheetStudio.sortByColumn(window.sheetStudio.activeCell.c, true)" title="Sắp xếp tăng dần A-Z">A-Z</button>
@@ -609,6 +626,16 @@
         <!-- Dynamic Grid Container -->
         <div id="sheet-grid-container" class="sheet-container">
           <!-- Rendered via sheet-studio.js -->
+        </div>
+
+        <!-- Real-time Sheet Status Bar -->
+        <div id="sheet-status-bar" style="display: flex; justify-content: space-between; align-items: center; padding: 0.4rem 0.8rem; font-size: 0.78rem; color: var(--text-muted); background: rgba(10, 15, 29, 0.95); border: 1px solid var(--border-subtle); border-top: none; border-radius: 0 0 8px 8px; flex-wrap: wrap; gap: 0.5rem;">
+          <div id="sheet-cell-info">Ô đang chọn: <b style="color: #38bdf8;">A1</b></div>
+          <div id="sheet-stats-summary" style="display: flex; gap: 1rem; align-items: center;">
+            <span>Tổng (SUM): <b style="color: #f8fafc;" id="sheet-stat-sum">0</b></span>
+            <span>Trung bình (AVG): <b style="color: #f8fafc;" id="sheet-stat-avg">0</b></span>
+            <span>Số ô dữ liệu (COUNT): <b style="color: #f8fafc;" id="sheet-stat-count">0</b></span>
+          </div>
         </div>
       </div>
     </section>

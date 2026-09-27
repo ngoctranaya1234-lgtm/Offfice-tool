@@ -996,4 +996,58 @@ document.addEventListener('DOMContentLoaded', async () => {
       console.log('Offfice tool PWA ServiceWorker notice:', err);
     });
   }
+
+  // 13. Universal Keyboard Shortcuts
+  window.addEventListener('keydown', (e) => {
+    const isCtrl = e.ctrlKey || e.metaKey;
+
+    // Esc: Close any open modal or Zen mode
+    if (e.key === 'Escape') {
+      const openModals = document.querySelectorAll('.modal-overlay:not(.hidden)');
+      openModals.forEach(m => m.classList.add('hidden'));
+      const zenWrap = document.querySelector('.word-editor-container.zen-mode-active');
+      if (zenWrap && window.wordStudio) {
+        window.wordStudio.toggleZenMode();
+      }
+      return;
+    }
+
+    // Ctrl+S / Cmd+S: Quick Save active studio document
+    if (isCtrl && e.key.toLowerCase() === 's') {
+      e.preventDefault();
+      const activeTab = document.querySelector('.tab-view.active')?.id;
+      if (activeTab === 'view-word' && window.wordStudio) {
+        window.wordStudio.exportDocx();
+      } else if (activeTab === 'view-excel' && window.sheetStudio) {
+        window.sheetStudio.exportXlsx();
+      } else if (activeTab === 'view-slides' && window.slidesStudio) {
+        window.slidesStudio.exportPptx();
+      } else if (activeTab === 'view-pdf' && window.downloadEditedPdf) {
+        window.downloadEditedPdf();
+      }
+      return;
+    }
+
+    // Ctrl+P / Cmd+P: Quick Print
+    if (isCtrl && e.key.toLowerCase() === 'p') {
+      const activeTab = document.querySelector('.tab-view.active')?.id;
+      if (activeTab === 'view-word' && window.wordStudio) {
+        e.preventDefault();
+        window.wordStudio.printDocument();
+      } else if (activeTab === 'view-pdf' && window.pdfEditorClient?.pdfDoc) {
+        e.preventDefault();
+        window.pdfEditorClient.printPdf();
+      }
+      return;
+    }
+
+    // Ctrl+F / Cmd+F in Word Studio
+    if (isCtrl && e.key.toLowerCase() === 'f') {
+      const activeTab = document.querySelector('.tab-view.active')?.id;
+      if (activeTab === 'view-word' && window.toggleWordFindReplace) {
+        e.preventDefault();
+        window.toggleWordFindReplace();
+      }
+    }
+  });
 });
