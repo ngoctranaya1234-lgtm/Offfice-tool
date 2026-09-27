@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#060911">
+  <title>Offfice tool - Bộ Công Cụ Văn Phòng & Chuyển Đổi Đa Nền Tảng</title>
+  
+  <!-- App Stylesheet -->
+  <link rel="stylesheet" href="public/app.css">
+
+  <!-- Vendor Libraries (Fully Local & Offline) -->
+  <script src="libs/jszip.min.js"></script>
+  <script src="libs/pdf-lib.min.js"></script>
+  <script src="libs/docx.iife.js"></script>
+  <script src="libs/pptxgen.bundle.js"></script>
+  <script src="libs/lucide.min.js"></script>
+
+  <!-- ES Module for PDF.js -->
+  <script type="module">
+    import * as pdfjsLib from './libs/pdf.min.mjs';
+    pdfjsLib.GlobalWorkerOptions.workerSrc = './libs/pdf.worker.min.mjs';
+    window.pdfjsLib = pdfjsLib;
+  </script>
+
+  <!-- Core Engines -->
+  <script src="src/engine/sound.js"></script>
+  <script src="src/engine/platform.js"></script>
+  <script src="src/engine/excel-engine.js"></script>
+  <script src="src/engine/pdf-editor-client.js"></script>
+  <script src="src/engine/converter-client.js"></script>
+  <script src="src/engine/word-studio.js"></script>
+  <script src="src/engine/sheet-studio.js"></script>
+  <script src="src/engine/slides-studio.js"></script>
+  <script src="src/app.js"></script>
+</head>
+<body>
+
+  <!-- Top App Header -->
+  <header class="app-header">
+    <div class="brand" onclick="window.switchTab('convert')">
+      <div class="brand-icon">
+        <i data-lucide="layers"></i>
+      </div>
+      <div class="brand-text">
+        <h1>Offfice tool</h1>
+        <p>Pro Office & Conversion Suite</p>
+      </div>
+    </div>
+
+    <!-- Desktop Navigation Tabs -->
+    <nav class="main-nav">
+      <button class="nav-tab active" data-tab="convert">
+        <i data-lucide="repeat"></i>
+        <span>Chuyển Đổi Tệp</span>
+      </button>
+      <button class="nav-tab" data-tab="pdf">
+        <i data-lucide="file-text"></i>
+        <span>Chỉnh Sửa PDF</span>
+      </button>
+      <button class="nav-tab" data-tab="word">
+        <i data-lucide="file-edit"></i>
+        <span>Word (Văn bản)</span>
+      </button>
+      <button class="nav-tab" data-tab="sheet">
+        <i data-lucide="table"></i>
+        <span>Excel (Bảng tính)</span>
+      </button>
+      <button class="nav-tab" data-tab="slides">
+        <i data-lucide="presentation"></i>
+        <span>PowerPoint</span>
+      </button>
+    </nav>
+
+    <!-- Header Actions -->
+    <div class="header-actions">
+      <div id="server-indicator" class="status-pill status-server-client">
+        <span class="status-dot"></span>
+        <span>Client PWA Engine</span>
+      </div>
+
+      <select id="platform-selector" class="platform-select" title="Giao diện theo nền tảng">
+        <option value="auto">Giao diện: Tự nhận diện</option>
+        <option value="ios">Giao diện: iOS (Cupertino)</option>
+        <option value="android">Giao diện: Android (Material)</option>
+        <option value="desktop">Giao diện: PC Desktop Pro</option>
+      </select>
+
+      <button id="sound-mute-btn" class="control-btn" title="Âm thanh phản hồi">
+        <i data-lucide="volume-2"></i>
+        <span>Tắt âm</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- App Main Content Views -->
+  <main class="app-main">
+
+    <!-- ========================================== -->
+    <!-- 1. CONVERTER HUB VIEW                      -->
+    <!-- ========================================== -->
+    <section id="view-convert" class="tab-view active">
+      <div class="surface-card rgp-glow" style="margin-bottom: 1.5rem;">
+        <h2 style="font-size: 1.3rem; margin-bottom: 0.35rem; display: flex; align-items: center; gap: 8px;">
+          <i data-lucide="sparkles" style="color: var(--accent-cyan);"></i>
+          Trung Tâm Chuyển Đổi Tài Liệu Đa Chiều
+        </h2>
+        <p style="color: var(--text-muted); font-size: 0.85rem;">
+          Chuyển đổi thực tế 100% không giả lập, giữ nguyên cấu trúc bảng biểu, văn bản, font chữ và số liệu.
+        </p>
+      </div>
+
+      <!-- Convert Type Selection Grid -->
+      <div class="convert-grid">
+        <div class="convert-card active" data-type="word-to-pdf">
+          <div class="card-top">
+            <i data-lucide="file-type-2" style="color: #38bdf8; width: 28px; height: 28px;"></i>
+            <span class="card-badge">Chính Xác Cao</span>
+          </div>
+          <div class="card-title">Word sang PDF</div>
+          <div class="card-desc">Chuyển đổi file .docx sang file .pdf chuẩn định dạng in ấn, bảo tồn bảng biểu và tiêu đề.</div>
+        </div>
+
+        <div class="convert-card" data-type="pdf-to-word">
+          <div class="card-top">
+            <i data-lucide="file-text" style="color: #f43f5e; width: 28px; height: 28px;"></i>
+            <span class="card-badge">Được Mong Chờ Nhất</span>
+          </div>
+          <div class="card-title">PDF sang Word</div>
+          <div class="card-desc">Trích xuất văn bản, cấu trúc đoạn và bảng từ PDF thành file .docx chỉnh sửa trực tiếp.</div>
+        </div>
+
+        <div class="convert-card" data-type="pdf-to-excel">
+          <div class="card-top">
+            <i data-lucide="table" style="color: #10b981; width: 28px; height: 28px;"></i>
+            <span class="card-badge">Trích Xuất Bảng</span>
+          </div>
+          <div class="card-title">PDF sang Excel</div>
+          <div class="card-desc">Tự động nhận diện dữ liệu dạng lưới, cột số liệu và xuất ra sổ tính .xlsx có định dạng.</div>
+        </div>
+
+        <div class="convert-card" data-type="excel-to-pdf">
+          <div class="card-top">
+            <i data-lucide="file-spreadsheet" style="color: #f59e0b; width: 28px; height: 28px;"></i>
+            <span class="card-badge">Báo Cáo Sạch</span>
+          </div>
+          <div class="card-title">Excel sang PDF</div>
+          <div class="card-desc">Định dạng bảng tính .xlsx thành file PDF khổ ngang A4 sắc nét, sẵn sàng gửi đối tác.</div>
+        </div>
+
+        <div class="convert-card" data-type="img-to-pdf">
+          <div class="card-top">
+            <i data-lucide="image" style="color: #a855f7; width: 28px; height: 28px;"></i>
+            <span class="card-badge">Hình Ảnh</span>
+          </div>
+          <div class="card-title">Ảnh sang PDF</div>
+          <div class="card-desc">Ghép các file ảnh chụp hóa đơn, tài liệu (JPG/PNG) thành một file tài liệu PDF duy nhất.</div>
+        </div>
+      </div>
+
+      <!-- File Upload & Conversion Container -->
+      <div class="surface-card">
+        <div id="convert-dropzone" class="dropzone">
+          <div class="dropzone-icon">
+            <i data-lucide="upload-cloud"></i>
+          </div>
+          <div class="dropzone-text">
+            <h3>Kéo thả tệp vào đây hoặc nhấn để chọn từ thiết bị</h3>
+            <p>Hỗ trợ tệp .docx, .pdf, .xlsx, .png, .jpg (xử lý trực tiếp, bảo mật tuyệt đối)</p>
+          </div>
+          <input type="file" id="convert-file-input" style="display: none;" accept=".docx,.doc">
+        </div>
+
+        <!-- Selected File Meta Card -->
+        <div id="file-info-card" class="file-action-card hidden">
+          <div class="file-info">
+            <div class="file-icon">
+              <i data-lucide="file"></i>
+            </div>
+            <div class="file-meta">
+              <h4 id="file-info-name">document.docx</h4>
+              <p id="file-info-size">0 KB</p>
+            </div>
+          </div>
+          <button id="start-convert-btn" class="btn-primary">
+            <i data-lucide="play"></i>
+            <span>Bắt Đầu Chuyển Đổi</span>
+          </button>
+        </div>
+
+        <!-- Progress Indicator -->
+        <div id="convert-progress-wrap" class="hidden" style="margin-top: 1.5rem;">
+          <div style="display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 0.35rem;">
+            <span id="convert-progress-label">Đang chuẩn bị...</span>
+          </div>
+          <div class="progress-bar-wrap">
+            <div id="convert-progress-fill" class="progress-fill"></div>
+          </div>
+        </div>
+
+        <!-- Download Result Card -->
+        <div id="convert-download-card" class="file-action-card hidden" style="border-color: rgba(16, 185, 129, 0.4); background: rgba(16, 185, 129, 0.08);">
+          <div class="file-info">
+            <div class="file-icon" style="background: rgba(16, 185, 129, 0.2); color: #10b981;">
+              <i data-lucide="check-circle-2"></i>
+            </div>
+            <div class="file-meta">
+              <h4 id="download-file-name">result.pdf</h4>
+              <p style="color: #34d399;">Chuyển đổi hoàn tất thành công 100%!</p>
+            </div>
+          </div>
+          <button id="convert-download-btn" class="btn-primary" style="background: linear-gradient(135deg, #10b981, #06b6d4);">
+            <i data-lucide="download"></i>
+            <span>Tải Về Ngay</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- 2. PDF STUDIO / EDITOR VIEW               -->
+    <!-- ========================================== -->
+    <section id="view-pdf" class="tab-view">
+      <div class="surface-card" style="margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+        <div>
+          <h2 style="font-size: 1.25rem; display: flex; align-items: center; gap: 8px;">
+            <i data-lucide="file-text" style="color: #f43f5e;"></i>
+            Menu Chỉnh Sửa File PDF Theo Ý Muốn
+          </h2>
+          <p style="color: var(--text-muted); font-size: 0.82rem;">Xoay trang, đóng dấu bản quyền, ký tên điện tử, gộp và tách trang PDF trực tiếp.</p>
+        </div>
+
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+          <label class="btn-secondary" style="cursor: pointer;">
+            <i data-lucide="folder-open"></i>
+            <span>Mở File PDF</span>
+            <input type="file" id="pdf-editor-upload" accept=".pdf" style="display: none;">
+          </label>
+          <button class="btn-primary" onclick="window.downloadEditedPdf()">
+            <i data-lucide="save"></i>
+            <span>Xuất File PDF Đã Sửa</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="pdf-studio-layout">
+        <!-- Thumbnails Strip -->
+        <div class="pdf-thumbs-pane">
+          <h4 style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.5rem;">CÁC TRANG PDF</h4>
+          <div id="pdf-thumbs-list">
+            <p style="font-size: 0.8rem; color: var(--text-muted); text-align: center; padding: 2rem 0;">Chưa nạp file PDF</p>
+          </div>
+        </div>
+
+        <!-- Main PDF Canvas Viewport -->
+        <div class="pdf-viewport-pane">
+          <div style="margin-bottom: 0.75rem; font-size: 0.82rem; color: var(--text-muted);">
+            Trang hiện tại: <b id="pdf-current-page-num" style="color: var(--accent-cyan);">0 / 0</b>
+          </div>
+          <div class="pdf-canvas-wrapper">
+            <canvas id="pdf-viewport-canvas"></canvas>
+          </div>
+        </div>
+
+        <!-- PDF Tools Panel -->
+        <div class="pdf-tools-pane">
+          <div class="tool-group">
+            <h4>Thao Tác Trang</h4>
+            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+              <button class="btn-secondary" onclick="window.rotateCurrentPage()">
+                <i data-lucide="rotate-cw"></i>
+                <span>Xoay Phải 90°</span>
+              </button>
+              <button class="btn-secondary" onclick="window.openWatermarkModal()">
+                <i data-lucide="stamp"></i>
+                <span>Đóng Dấu Bản Quyền (Watermark)</span>
+              </button>
+              <button class="btn-secondary" onclick="window.openSignatureModal()">
+                <i data-lucide="pen-tool"></i>
+                <span>Ký Tên Điện Tử</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="tool-group">
+            <h4>Bảo Mật & Thông Tin</h4>
+            <p style="font-size: 0.78rem; color: var(--text-muted); line-height: 1.5;">
+              Mọi chỉnh sửa được biên dịch trực tiếp thông qua chuẩn PDF-Lib. Dữ liệu tài liệu được bảo vệ an toàn trên thiết bị của bạn.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- 3. WORD DOCUMENT STUDIO VIEW               -->
+    <!-- ========================================== -->
+    <section id="view-word" class="tab-view">
+      <div class="surface-card" style="margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+        <div>
+          <h2 style="font-size: 1.25rem; display: flex; align-items: center; gap: 8px;">
+            <i data-lucide="file-edit" style="color: #38bdf8;"></i>
+            Word Document Studio
+          </h2>
+          <p style="color: var(--text-muted); font-size: 0.82rem;">Soạn thảo tài liệu văn phòng, mở tệp .docx và xuất sang .docx hoặc .pdf chất lượng cao.</p>
+        </div>
+
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+          <label class="btn-secondary" style="cursor: pointer;">
+            <i data-lucide="folder-open"></i>
+            <span>Mở .docx</span>
+            <input type="file" id="word-open-input" accept=".docx" style="display: none;">
+          </label>
+          <button class="btn-secondary" onclick="window.wordStudio.exportDocx()">
+            <i data-lucide="file-down"></i>
+            <span>Lưu File .docx</span>
+          </button>
+          <button class="btn-primary" onclick="window.wordStudio.exportPdf()">
+            <i data-lucide="download"></i>
+            <span>Xuất sang PDF</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="word-studio-wrap">
+        <!-- Ribbon Toolbar -->
+        <div class="ribbon-toolbar">
+          <div class="toolbar-group">
+            <button class="tool-btn" onclick="window.wordStudio.insertHeading(1)" title="Tiêu đề 1">H1</button>
+            <button class="tool-btn" onclick="window.wordStudio.insertHeading(2)" title="Tiêu đề 2">H2</button>
+            <button class="tool-btn" onclick="window.wordStudio.insertHeading(3)" title="Tiêu đề 3">H3</button>
+          </div>
+
+          <div class="toolbar-group">
+            <button class="tool-btn" onclick="window.wordStudio.exec('bold')" title="In đậm (Ctrl+B)"><b>B</b></button>
+            <button class="tool-btn" onclick="window.wordStudio.exec('italic')" title="In nghiêng (Ctrl+I)"><i>I</i></button>
+            <button class="tool-btn" onclick="window.wordStudio.exec('underline')" title="Gạch chân (Ctrl+U)"><u>U</u></button>
+            <button class="tool-btn" onclick="window.wordStudio.exec('strikeThrough')" title="Gạch ngang"><s>S</s></button>
+          </div>
+
+          <div class="toolbar-group">
+            <button class="tool-btn" onclick="window.wordStudio.exec('justifyLeft')" title="Căn trái"><i data-lucide="align-left"></i></button>
+            <button class="tool-btn" onclick="window.wordStudio.exec('justifyCenter')" title="Căn giữa"><i data-lucide="align-center"></i></button>
+            <button class="tool-btn" onclick="window.wordStudio.exec('justifyRight')" title="Căn phải"><i data-lucide="align-right"></i></button>
+            <button class="tool-btn" onclick="window.wordStudio.exec('justifyFull')" title="Căn đều"><i data-lucide="align-justify"></i></button>
+          </div>
+
+          <div class="toolbar-group">
+            <button class="tool-btn" onclick="window.wordStudio.exec('insertUnorderedList')" title="Danh sách chấm"><i data-lucide="list"></i></button>
+            <button class="tool-btn" onclick="window.wordStudio.exec('insertOrderedList')" title="Danh sách số"><i data-lucide="list-ordered"></i></button>
+            <button class="tool-btn" onclick="window.wordStudio.insertTable(3, 3)" title="Chèn bảng biểu"><i data-lucide="table"></i></button>
+          </div>
+
+          <div class="toolbar-group" style="border: none;">
+            <button class="tool-btn" onclick="window.wordStudio.exec('undo')" title="Hoàn tác"><i data-lucide="undo"></i></button>
+            <button class="tool-btn" onclick="window.wordStudio.exec('redo')" title="Làm lại"><i data-lucide="redo"></i></button>
+          </div>
+        </div>
+
+        <!-- A4 Realistic Page Canvas -->
+        <div style="background: rgba(10, 15, 28, 0.4); padding: 1.5rem; border-radius: 12px; overflow-x: auto;">
+          <div id="word-editor-body" class="word-canvas-sheet" contenteditable="true" spellcheck="false">
+            <h2>KẾ HOẠCH TRIỂN KHAI OFFFICE TOOL PRO</h2>
+            <p>Đây là trình soạn thảo văn bản thông minh hỗ trợ tạo và chỉnh sửa tài liệu chuẩn Microsoft Word trực tiếp trong trình duyệt.</p>
+            <p><b>Tính năng chính:</b></p>
+            <ul>
+              <li>Hỗ trợ xuất sang chuẩn OpenXML (.docx) nguyên bản.</li>
+              <li>Chuyển đổi một chạm sang tài liệu PDF có định dạng chuẩn A4.</li>
+              <li>Bảo mật dữ liệu tối đa, hoạt động ổn định trên cả PC và điện thoại thông minh.</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Stats Bar -->
+        <div id="word-stats-bar" style="font-size: 0.8rem; color: var(--text-muted); padding: 0.5rem 0.75rem;">
+          Đang tính toán thống kê từ...
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- 4. EXCEL SPREADSHEET STUDIO VIEW          -->
+    <!-- ========================================== -->
+    <section id="view-sheet" class="tab-view">
+      <div class="surface-card" style="margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+        <div>
+          <h2 style="font-size: 1.25rem; display: flex; align-items: center; gap: 8px;">
+            <i data-lucide="table" style="color: #10b981;"></i>
+            Excel Spreadsheet Studio
+          </h2>
+          <p style="color: var(--text-muted); font-size: 0.82rem;">Lưới bảng tính trực quan, tính toán công thức =SUM, =AVERAGE, =IF, mở và lưu file .xlsx.</p>
+        </div>
+
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+          <label class="btn-secondary" style="cursor: pointer;">
+            <i data-lucide="folder-open"></i>
+            <span>Mở .xlsx</span>
+            <input type="file" id="sheet-open-input" accept=".xlsx,.csv" style="display: none;">
+          </label>
+          <button class="btn-secondary" onclick="window.sheetStudio.exportCsv()">
+            <i data-lucide="file-spreadsheet"></i>
+            <span>Xuất .csv</span>
+          </button>
+          <button class="btn-primary" onclick="window.sheetStudio.exportXlsx()">
+            <i data-lucide="download"></i>
+            <span>Xuất File .xlsx</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="sheet-studio-wrap">
+        <!-- Quick Formula & Formatting Bar -->
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; background: rgba(22, 33, 58, 0.85); padding: 0.5rem 0.75rem; border-radius: 8px; border: 1px solid var(--border-subtle);">
+          <button class="btn-secondary" style="padding: 4px 10px; font-size: 0.78rem;" onclick="window.sheetStudio.addRow()">+ Thêm Hàng</button>
+          <button class="btn-secondary" style="padding: 4px 10px; font-size: 0.78rem;" onclick="window.sheetStudio.addCol()">+ Thêm Cột</button>
+          <button class="tool-btn" onclick="window.sheetStudio.toggleStyle('bold')" title="In đậm"><b>B</b></button>
+          <button class="tool-btn" onclick="window.sheetStudio.toggleStyle('italic')" title="In nghiêng"><i>I</i></button>
+          <button class="tool-btn" onclick="window.sheetStudio.toggleStyle('color', '#10b981')" title="Màu xanh"><span style="color:#10b981;">A</span></button>
+          <button class="tool-btn" onclick="window.sheetStudio.toggleStyle('color', '#38bdf8')" title="Màu xanh dương"><span style="color:#38bdf8;">A</span></button>
+          <button class="tool-btn" onclick="window.sheetStudio.toggleStyle('color', '#f8fafc')" title="Mặc định">A</button>
+        </div>
+
+        <!-- Formula Input Bar -->
+        <div class="formula-bar">
+          <div id="sheet-active-cell-ref" class="cell-ref">A1</div>
+          <span style="font-family: var(--font-mono); color: var(--text-muted); font-size: 0.85rem; font-weight: bold;">fx</span>
+          <input type="text" id="sheet-formula-input" class="formula-input" placeholder="Nhập giá trị hoặc công thức (Ví dụ: =SUM(A1:A5) hoặc =B2*C2)...">
+        </div>
+
+        <!-- Dynamic Grid Container -->
+        <div id="sheet-grid-container" class="sheet-container">
+          <!-- Rendered via sheet-studio.js -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- 5. PRESENTATION STUDIO VIEW               -->
+    <!-- ========================================== -->
+    <section id="view-slides" class="tab-view">
+      <div class="surface-card" style="margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+        <div>
+          <h2 style="font-size: 1.25rem; display: flex; align-items: center; gap: 8px;">
+            <i data-lucide="presentation" style="color: #f59e0b;"></i>
+            PowerPoint / Slides Studio
+          </h2>
+          <p style="color: var(--text-muted); font-size: 0.82rem;">Thiết kế slide trình chiếu, trình chiếu toàn màn hình chuyên nghiệp và xuất file .pptx.</p>
+        </div>
+
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+          <button class="btn-secondary" onclick="window.slidesStudio.startPresentation()">
+            <i data-lucide="play"></i>
+            <span>Bắt Đầu Trình Chiếu</span>
+          </button>
+          <button class="btn-primary" onclick="window.slidesStudio.exportPptx()">
+            <i data-lucide="download"></i>
+            <span>Xuất File .pptx</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="slides-layout">
+        <!-- Slides List Sidebar -->
+        <div class="slides-sidebar">
+          <div style="display: flex; gap: 0.5rem;">
+            <button class="btn-secondary" style="flex: 1; padding: 6px;" onclick="window.slidesStudio.addSlide()">+ Thêm Slide</button>
+            <button class="btn-secondary" style="padding: 6px;" onclick="window.slidesStudio.deleteCurrentSlide()" title="Xóa slide">
+              <i data-lucide="trash-2"></i>
+            </button>
+          </div>
+          <div id="slides-thumb-list" style="display: flex; flex-direction: column; gap: 0.6rem;">
+            <!-- Rendered via slides-studio.js -->
+          </div>
+        </div>
+
+        <!-- Slide Stage Area -->
+        <div class="slide-stage-wrap">
+          <!-- Canvas Top Controls -->
+          <div style="margin-bottom: 1rem; display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+            <button class="btn-secondary" onclick="window.slidesStudio.addTextElement('heading')">+ Tiêu Đề</button>
+            <button class="btn-secondary" onclick="window.slidesStudio.addTextElement('text')">+ Đoạn Văn</button>
+            <button class="btn-secondary" onclick="window.slidesStudio.addTextElement('badge')">+ Nhãn Nổi Bật</button>
+            <span style="color: var(--border-subtle); margin: 0 4px;">|</span>
+            <span style="font-size: 0.78rem; color: var(--text-muted);">Màu nền:</span>
+            <button class="tool-btn" style="background: #0f172a;" onclick="window.slidesStudio.setTheme('#0f172a')"></button>
+            <button class="tool-btn" style="background: #064e3b;" onclick="window.slidesStudio.setTheme('#064e3b')"></button>
+            <button class="tool-btn" style="background: #1e1b4b;" onclick="window.slidesStudio.setTheme('#1e1b4b')"></button>
+            <button class="tool-btn" style="background: #701a75;" onclick="window.slidesStudio.setTheme('#701a75')"></button>
+          </div>
+
+          <!-- Slide 16:9 Canvas -->
+          <div id="slides-main-canvas" class="slide-canvas">
+            <!-- Rendered via slides-studio.js -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Mobile Bottom Navigation (Responsive) -->
+  <nav class="mobile-nav-bar">
+    <button class="mobile-nav-item active" data-tab="convert">
+      <i data-lucide="repeat"></i>
+      <span>Chuyển Đổi</span>
+    </button>
+    <button class="mobile-nav-item" data-tab="pdf">
+      <i data-lucide="file-text"></i>
+      <span>Sửa PDF</span>
+    </button>
+    <button class="mobile-nav-item" data-tab="word">
+      <i data-lucide="file-edit"></i>
+      <span>Word</span>
+    </button>
+    <button class="mobile-nav-item" data-tab="sheet">
+      <i data-lucide="table"></i>
+      <span>Excel</span>
+    </button>
+    <button class="mobile-nav-item" data-tab="slides">
+      <i data-lucide="presentation"></i>
+      <span>Slides</span>
+    </button>
+  </nav>
+
+  <!-- MODAL: Watermark -->
+  <div id="watermark-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <h3 style="font-size: 1.15rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 8px;">
+        <i data-lucide="stamp" style="color: var(--accent-cyan);"></i>
+        Đóng Dấu Bản Quyền (Watermark)
+      </h3>
+      <div style="display: flex; flex-direction: column; gap: 0.85rem; font-size: 0.85rem;">
+        <div>
+          <label style="display: block; margin-bottom: 4px; color: var(--text-muted);">Nội dung chữ đóng dấu:</label>
+          <input type="text" id="wm-text-input" value="BẢN QUYỀN - OFFFICE TOOL" style="width: 100%; padding: 8px; border-radius: 6px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-subtle); color: white;">
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div>
+            <label style="display: block; margin-bottom: 4px; color: var(--text-muted);">Độ mờ đục (Opacity):</label>
+            <input type="range" id="wm-opacity-slider" min="0.1" max="1" step="0.05" value="0.3" style="width: 100%;">
+          </div>
+          <div>
+            <label style="display: block; margin-bottom: 4px; color: var(--text-muted);">Màu sắc:</label>
+            <input type="color" id="wm-color-picker" value="#ef4444" style="width: 100%; height: 32px; border: none; background: transparent; cursor: pointer;">
+          </div>
+        </div>
+        <div>
+          <label style="display: block; margin-bottom: 4px; color: var(--text-muted);">Góc nghiêng:</label>
+          <select id="wm-angle-select" style="width: 100%; padding: 8px; border-radius: 6px; background: #0f172a; border: 1px solid var(--border-subtle); color: white;">
+            <option value="45">Nghiêng 45° (Đường chéo)</option>
+            <option value="0">Nằm ngang 0°</option>
+            <option value="-45">Nghiêng -45°</option>
+          </select>
+        </div>
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 0.6rem; margin-top: 1.5rem;">
+        <button class="btn-secondary" onclick="window.closeWatermarkModal()">Hủy</button>
+        <button class="btn-primary" onclick="window.applyWatermark()">Áp Dụng Cho Toàn Bộ Trang</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Digital Signature Pad -->
+  <div id="signature-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <h3 style="font-size: 1.15rem; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 8px;">
+        <i data-lucide="pen-tool" style="color: var(--accent-emerald);"></i>
+        Ký Tên Điện Tử Trực Tiếp
+      </h3>
+      <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1rem;">
+        Dùng ngón tay (trên điện thoại) hoặc chuột (trên PC) để vẽ chữ ký của bạn vào khung bên dưới.
+      </p>
+      <div style="display: flex; justify-content: center; margin-bottom: 1rem;">
+        <canvas id="signature-pad-canvas" width="460" height="180"></canvas>
+      </div>
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <button class="btn-secondary" onclick="window.clearSignature()">Xóa Ký Lại</button>
+        <div style="display: flex; gap: 0.5rem;">
+          <button class="btn-secondary" onclick="document.getElementById('signature-modal').classList.add('hidden')">Đóng</button>
+          <button class="btn-primary" onclick="window.applySignature()">Đóng Dấu Chữ Ký Vào Trang</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Fullscreen Presentation -->
+  <div id="presentation-modal" class="presentation-fullscreen hidden">
+    <div class="presentation-screen">
+      <div id="presentation-content" style="width: 100%; height: 100%; position: relative;"></div>
+      <div style="position: absolute; bottom: 20px; right: 30px; display: flex; align-items: center; gap: 1rem; background: rgba(0,0,0,0.6); padding: 8px 16px; border-radius: 999px; backdrop-filter: blur(10px);">
+        <span id="presentation-indicator" style="font-size: 0.85rem; color: #94a3b8;">1 / 2</span>
+        <button class="control-btn" onclick="window.slidesStudio.exitPresentation()">
+          <i data-lucide="x"></i>
+          <span>Thoát (Esc)</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

@@ -1,0 +1,16 @@
+# Operating System Files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+
+# Temporary uploads and conversions
+temp_uploads/
+test_data/
+*.pyc
+__pycache__/
+
+# Logs and environment
+*.log
+.env
