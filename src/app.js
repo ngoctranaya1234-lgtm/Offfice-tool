@@ -17,9 +17,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   const views = document.querySelectorAll('.tab-view');
 
   window.switchTab = function(tabId) {
+    if (!document.getElementById(`view-${tabId}`)) return;
     if (window.sound) window.sound.tabSwitch();
+    if (window.location.hash !== `#${tabId}`) window.history.replaceState(null, '', `#${tabId}`);
     tabs.forEach(t => {
-      if (t.getAttribute('data-tab') === tabId) {
+      const active = t.getAttribute('data-tab') === tabId;
+      t.setAttribute('aria-current', active ? 'page' : 'false');
+      if (active) {
         t.classList.add('active');
       } else {
         t.classList.remove('active');
@@ -36,7 +40,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (tabId === 'pdf') {
       if (!loadedPdfArrayBuffer && window.createBlankPdf) {
-        window.createBlankPdf(true);
+        window.createBlankPdf(true).catch(error => alert(`Không thể khởi tạo PDF: ${error.message}`));
       }
     }
     if (tabId === 'sheet' && window.sheetStudio) {
@@ -45,10 +49,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (tabId === 'slides' && window.slidesStudio) {
       window.slidesStudio.render();
     }
+    if (tabId === 'workspace') document.dispatchEvent(new Event('workspace:view'));
     if (window.lucide) window.lucide.createIcons();
   };
 
   tabs.forEach(t => {
+    t.setAttribute('aria-current', t.classList.contains('active') ? 'page' : 'false');
     t.addEventListener('click', () => {
       const tabId = t.getAttribute('data-tab');
       window.switchTab(tabId);
@@ -86,6 +92,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // =========================================================================
   let selectedConvertType = 'word-to-pdf';
   let activeConvertFile = null;
+  let conversionBusy = false;
 
   const convertCards = document.querySelectorAll('.convert-card');
   const dropzone = document.getElementById('convert-dropzone');
@@ -99,10 +106,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   const downloadBtn = document.getElementById('convert-download-btn');
 
   window.selectConvertType = function(type) {
+    if (conversionBusy) return;
     if (window.sound) window.sound.click();
     selectedConvertType = type;
+    activeConvertFile = null;
+    activeConvertFiles = null;
+    if (fileInput) fileInput.value = '';
+    fileInfoCard?.classList.add('hidden');
+    downloadCard?.classList.add('hidden');
+    progressWrap?.classList.add('hidden');
     convertCards.forEach(c => {
-      if (c.getAttribute('data-type') === type) {
+      const active = c.getAttribute('data-type') === type;
+      c.setAttribute('aria-pressed', active ? 'true' : 'false');
+      if (active) {
         c.classList.add('active');
       } else {
         c.classList.remove('active');
@@ -110,10 +126,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     const acceptMap = {
-      'word-to-pdf': '.docx,.doc',
+      'word-to-pdf': '.docx',
       'pdf-to-word': '.pdf',
       'pdf-to-excel': '.pdf',
-      'excel-to-pdf': '.xlsx,.xls',
+      'excel-to-pdf': '.xlsx',
       'img-to-pdf': '.png,.jpg,.jpeg,.webp',
       'pdf-to-img': '.pdf',
       'compress-pdf': '.pdf'
@@ -125,8 +141,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   };
 
   convertCards.forEach(card => {
+    card.setAttribute('role', 'button');
+    card.tabIndex = 0;
+    card.setAttribute('aria-pressed', card.classList.contains('active') ? 'true' : 'false');
     card.addEventListener('click', () => {
       window.selectConvertType(card.getAttribute('data-type'));
+    });
+    card.addEventListener('keydown', event => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        window.selectConvertType(card.getAttribute('data-type'));
+      }
     });
   });
 
@@ -134,6 +159,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   if (dropzone && fileInput) {
     dropzone.addEventListener('click', () => fileInput.click());
+    dropzone.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); fileInput.click(); }
+    });
     dropzone.addEventListener('dragover', (e) => {
       e.preventDefault();
       dropzone.classList.add('dragover');
@@ -154,9 +182,29 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function handleConvertFiles(files) {
+    if (conversionBusy) return;
+    const accepted = {
+      'word-to-pdf': ['.docx'], 'pdf-to-word': ['.pdf'], 'pdf-to-excel': ['.pdf'],
+      'excel-to-pdf': ['.xlsx'], 'img-to-pdf': ['.png', '.jpg', '.jpeg', '.webp'],
+      'pdf-to-img': ['.pdf'], 'compress-pdf': ['.pdf']
+    }[selectedConvertType];
+    const picked = Array.from(files);
+    const valid = picked.length && (selectedConvertType === 'img-to-pdf' || picked.length === 1) &&
+      picked.every(file => file.size > 0 && file.size <= 50 * 1024 * 1024 && accepted.some(ext => file.name.toLowerCase().endsWith(ext))) &&
+      picked.reduce((sum, file) => sum + file.size, 0) <= 100 * 1024 * 1024;
+    if (!valid) {
+      alert(`Tệp không phù hợp. Chọn ${accepted.join(', ')} (mỗi tệp tối đa 50 MB, tổng tối đa 100 MB).`);
+      activeConvertFile = null;
+      activeConvertFiles = null;
+      fileInfoCard?.classList.add('hidden');
+      downloadCard?.classList.add('hidden');
+      convertActionBtn.disabled = true;
+      fileInput.value = '';
+      return;
+    }
     if (window.sound) window.sound.swoop();
-    activeConvertFiles = Array.from(files);
-    activeConvertFile = files[0];
+    activeConvertFiles = picked;
+    activeConvertFile = picked[0];
 
     if (fileInfoCard) {
       fileInfoCard.classList.remove('hidden');
@@ -172,11 +220,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (downloadCard) downloadCard.classList.add('hidden');
     if (progressWrap) progressWrap.classList.add('hidden');
     if (convertActionBtn) convertActionBtn.disabled = false;
+    fileInput.value = '';
   }
 
   if (convertActionBtn) {
     convertActionBtn.addEventListener('click', async () => {
       if (!activeConvertFile) return;
+      const conversionType = selectedConvertType;
+      const sourceFile = activeConvertFile;
+      const sourceFiles = activeConvertFiles;
+      conversionBusy = true;
+      fileInput.disabled = true;
+      dropzone.setAttribute('aria-disabled', 'true');
+      convertCards.forEach(card => card.setAttribute('aria-disabled', 'true'));
       if (window.sound) window.sound.click();
 
       convertActionBtn.disabled = true;
@@ -187,29 +243,34 @@ document.addEventListener('DOMContentLoaded', async () => {
         progressFill.style.width = `${pct}%`;
         progressLabel.innerText = label;
       };
+      updateProgress(0, 'Đang chuẩn bị...');
 
       try {
         let result = null;
-        if (selectedConvertType === 'word-to-pdf') {
-          result = await window.converter.convertWordToPdf(activeConvertFile, updateProgress);
-        } else if (selectedConvertType === 'pdf-to-word') {
-          result = await window.converter.convertPdfToWord(activeConvertFile, updateProgress);
-        } else if (selectedConvertType === 'pdf-to-excel') {
-          result = await window.converter.convertPdfToExcel(activeConvertFile, updateProgress);
-        } else if (selectedConvertType === 'excel-to-pdf') {
-          result = await window.converter.convertExcelToPdf(activeConvertFile, updateProgress);
-        } else if (selectedConvertType === 'img-to-pdf') {
-          result = await window.converter.convertImageToPdf(activeConvertFiles || activeConvertFile, updateProgress);
-        } else if (selectedConvertType === 'pdf-to-img') {
-          result = await window.converter.convertPdfToImages(activeConvertFile, updateProgress);
-        } else if (selectedConvertType === 'compress-pdf') {
-          result = await window.converter.compressPdf(activeConvertFile, updateProgress);
+        if (conversionType === 'word-to-pdf') {
+          result = await window.converter.convertWordToPdf(sourceFile, updateProgress);
+        } else if (conversionType === 'pdf-to-word') {
+          result = await window.converter.convertPdfToWord(sourceFile, updateProgress);
+        } else if (conversionType === 'pdf-to-excel') {
+          result = await window.converter.convertPdfToExcel(sourceFile, updateProgress);
+        } else if (conversionType === 'excel-to-pdf') {
+          result = await window.converter.convertExcelToPdf(sourceFile, updateProgress);
+        } else if (conversionType === 'img-to-pdf') {
+          result = await window.converter.convertImageToPdf(sourceFiles, updateProgress);
+        } else if (conversionType === 'pdf-to-img') {
+          result = await window.converter.convertPdfToImages(sourceFile, updateProgress);
+        } else if (conversionType === 'compress-pdf') {
+          result = await window.converter.compressPdf(sourceFile, updateProgress);
         }
 
         if (result && result.blob) {
           if (window.sound) window.sound.success();
           downloadCard.classList.remove('hidden');
           document.getElementById('download-file-name').innerText = result.filename;
+          document.dispatchEvent(new CustomEvent('workspace:conversion', { detail: {
+            type: conversionType, inputName: sourceFiles.length > 1 ? `${sourceFiles.length} ảnh` : sourceFile.name,
+            filename: result.filename, blob: result.blob
+          } }));
 
           downloadBtn.onclick = () => {
             const url = URL.createObjectURL(result.blob);
@@ -217,7 +278,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             a.href = url;
             a.download = result.filename;
             a.click();
-            URL.revokeObjectURL(url);
+            setTimeout(() => URL.revokeObjectURL(url), 60000);
           };
         }
       } catch (err) {
@@ -225,6 +286,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         alert('Lỗi chuyển đổi: ' + err.message);
         console.error(err);
       } finally {
+        conversionBusy = false;
+        fileInput.disabled = false;
+        dropzone.removeAttribute('aria-disabled');
+        convertCards.forEach(card => card.removeAttribute('aria-disabled'));
         convertActionBtn.disabled = false;
       }
     });
@@ -238,6 +303,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   const pdfMainCanvas = document.getElementById('pdf-viewport-canvas');
   const pdfDrawingCanvas = document.getElementById('pdf-drawing-canvas');
   let loadedPdfArrayBuffer = null;
+  let pdfSourceName = 'Tài liệu PDF';
+  let pdfCreatePromise = null;
   let pdfZoomLevel = 1.2;
   let activePdfTool = 'view'; // 'view' | 'pen' | 'highlighter'
 
@@ -538,12 +605,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   };
 
   // Create / Initialize Blank A4 PDF Document
-  window.createBlankPdf = async function(silent = false) {
-    if (!silent && window.sound) window.sound.swoop();
-    const bytes = await window.pdfEditorClient.createBlankDocument();
-    loadedPdfArrayBuffer = bytes.buffer;
-    await window.pdfEditorClient.loadPdf(loadedPdfArrayBuffer);
-    await renderPdfPages();
+  window.createBlankPdf = function(silent = false) {
+    if (pdfCreatePromise) return pdfCreatePromise;
+    pdfCreatePromise = (async () => {
+      if (!silent && window.sound) window.sound.swoop();
+      pdfSourceName = 'PDF mới';
+      const bytes = await window.pdfEditorClient.createBlankDocument();
+      loadedPdfArrayBuffer = bytes.buffer;
+      await window.pdfEditorClient.loadPdf(loadedPdfArrayBuffer);
+      await renderPdfPages();
+    })().finally(() => { pdfCreatePromise = null; });
+    return pdfCreatePromise;
   };
 
   // OCR / Extract Page Text
@@ -594,10 +666,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     pdfUploadInput.addEventListener('change', async (e) => {
       if (e.target.files.length > 0) {
         const file = e.target.files[0];
-        if (window.sound) window.sound.swoop();
-        loadedPdfArrayBuffer = await file.arrayBuffer();
-        await window.pdfEditorClient.loadPdf(loadedPdfArrayBuffer);
-        await renderPdfPages();
+        try {
+          if (!file.name.toLowerCase().endsWith('.pdf') || !file.size || file.size > 50 * 1024 * 1024) throw new Error('Chọn tệp .pdf từ 1 B đến 50 MB.');
+          if (window.sound) window.sound.swoop();
+          if (pdfCreatePromise) await pdfCreatePromise;
+          const data = await file.arrayBuffer();
+          await window.pdfEditorClient.loadPdf(data);
+          loadedPdfArrayBuffer = data;
+          pdfSourceName = file.name;
+          await renderPdfPages();
+        } catch (error) {
+          if (window.sound) window.sound.error();
+          alert(`Không thể mở PDF: ${error.message}`);
+        } finally { e.target.value = ''; }
       }
     });
   }
@@ -1026,14 +1107,27 @@ document.addEventListener('DOMContentLoaded', async () => {
       alert('Chưa có file PDF nào được mở.');
       return;
     }
-    if (window.sound) window.sound.success();
-    const blob = await window.pdfEditorClient.exportPdfBlob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'Offfice_Edited_Document.pdf';
-    a.click();
-    URL.revokeObjectURL(url);
+    const control = document.getElementById('pdf-download-btn');
+    if (control) control.disabled = true;
+    try {
+      const blob = await window.pdfEditorClient.exportPdfBlob();
+      const filename = 'Offfice_Edited_Document.pdf';
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.append(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+      document.dispatchEvent(new CustomEvent('workspace:conversion', { detail: { type: 'pdf-edited', inputName: pdfSourceName, filename, blob } }));
+      if (window.sound) window.sound.success();
+    } catch (error) {
+      if (window.sound) window.sound.error();
+      alert(`Không thể xuất PDF: ${error.message}`);
+    } finally {
+      if (control) control.disabled = false;
+    }
   };
 
   // 8. Word Studio Initialization
@@ -1043,7 +1137,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (wordOpenInput) {
       wordOpenInput.addEventListener('change', async (e) => {
         if (e.target.files.length > 0) {
-          await window.wordStudio.loadDocxFile(e.target.files[0]);
+          try {
+            await window.wordStudio.loadDocxFile(e.target.files[0]);
+            document.dispatchEvent(new CustomEvent('workspace:dirty', { detail: { studio: 'word' } }));
+          } catch (error) { alert(`Không thể mở Word: ${error.message}`); }
+          e.target.value = '';
         }
       });
     }
@@ -1081,10 +1179,24 @@ document.addEventListener('DOMContentLoaded', async () => {
       sheetOpenInput.addEventListener('change', async (e) => {
         if (e.target.files.length > 0) {
           const file = e.target.files[0];
-          const arrayBuffer = await file.arrayBuffer();
-          const parsed = await window.excelEngine.parseXlsx(arrayBuffer);
-          window.sheetStudio.data = parsed;
-          window.sheetStudio.renderGrid();
+          try {
+            if (!/\.(xlsx|csv)$/i.test(file.name) || !file.size || file.size > 20 * 1024 * 1024) throw new Error('Chọn tệp .xlsx hoặc .csv từ 1 B đến 20 MB.');
+            const parsed = file.name.toLowerCase().endsWith('.csv')
+              ? window.excelEngine.parseCsv(await file.text())
+              : await window.excelEngine.parseXlsx(await file.arrayBuffer());
+            if (!Array.isArray(parsed) || parsed.length > 500 || parsed.some(row => !Array.isArray(row) || row.length > 100)) throw new Error('Bảng tính vượt giới hạn 500 hàng hoặc 100 cột.');
+            const rows = Math.max(30, parsed.length);
+            const cols = Math.max(12, ...parsed.map(row => row.length));
+            window.sheetStudio.data = Array.from({ length: rows }, (_, index) => Array.from({ length: cols }, (_, col) => parsed[index]?.[col] ?? ''));
+            window.sheetStudio.rows = rows;
+            window.sheetStudio.cols = cols;
+            window.sheetStudio.styles = {};
+            window.sheetStudio.activeCell = { r: 0, c: 0 };
+            window.sheetStudio.renderGrid();
+            window.sheetStudio.selectCell(0, 0);
+            document.dispatchEvent(new CustomEvent('workspace:dirty', { detail: { studio: 'sheet' } }));
+          } catch (error) { alert(`Không thể mở bảng tính: ${error.message}`); }
+          e.target.value = '';
         }
       });
     }
@@ -1111,6 +1223,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.slidesStudio.init('slides-main-canvas', 'slides-thumb-list');
   }
 
+  const initialTab = window.location.hash.slice(1);
+  if (initialTab && document.getElementById(`view-${initialTab}`)) window.switchTab(initialTab);
+
   // 11. Heartbeat check for server
   if (window.converter) {
     await window.converter.checkServer();
@@ -1127,8 +1242,35 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // 13. Universal Keyboard Shortcuts
+  const focusBeforeModal = new WeakMap();
+  const modalObserver = new MutationObserver(records => {
+    for (const record of records) {
+      const modal = record.target;
+      if (!modal.classList.contains('hidden')) {
+        if (!modal.contains(document.activeElement)) focusBeforeModal.set(modal, document.activeElement);
+        modal.querySelector('input:not([type="hidden"]), button, select, textarea')?.focus();
+      } else {
+        const previous = focusBeforeModal.get(modal);
+        if (previous?.isConnected) previous.focus();
+      }
+    }
+  });
+  document.querySelectorAll('.modal-overlay').forEach(modal => modalObserver.observe(modal, { attributes: true, attributeFilter: ['class'] }));
+
   window.addEventListener('keydown', (e) => {
     const isCtrl = e.ctrlKey || e.metaKey;
+
+    if (e.key === 'Tab') {
+      const modal = document.querySelector('.modal-overlay:not(.hidden)');
+      if (modal) {
+        const controls = Array.from(modal.querySelectorAll('button, input, select, textarea, [tabindex]')).filter(el => !el.disabled && el.getClientRects().length);
+        if (controls.length) {
+          const first = controls[0], last = controls[controls.length - 1];
+          if (e.shiftKey && (document.activeElement === first || !modal.contains(document.activeElement))) { e.preventDefault(); last.focus(); }
+          else if (!e.shiftKey && (document.activeElement === last || !modal.contains(document.activeElement))) { e.preventDefault(); first.focus(); }
+        }
+      }
+    }
 
     // Esc: Close any open modal or Zen mode
     if (e.key === 'Escape') {
@@ -1147,7 +1289,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const activeTab = document.querySelector('.tab-view.active')?.id;
       if (activeTab === 'view-word' && window.wordStudio) {
         window.wordStudio.exportDocx();
-      } else if (activeTab === 'view-excel' && window.sheetStudio) {
+      } else if (activeTab === 'view-sheet' && window.sheetStudio) {
         window.sheetStudio.exportXlsx();
       } else if (activeTab === 'view-slides' && window.slidesStudio) {
         window.slidesStudio.exportPptx();

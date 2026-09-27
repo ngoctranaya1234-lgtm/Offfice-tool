@@ -1,5 +1,13 @@
 # 🌟 Offfice tool Pro - Bộ Công Cụ Văn Phòng & Chuyển Đổi Tệp Đa Nền Tảng
 
+> [Ma trận tính năng và giới hạn sản phẩm](PRODUCT_MATRIX.md)
+
+## Không gian làm việc cục bộ
+
+Mở tab **Gần đây** để xem bản nháp Word/Excel/Slides tự lưu, tìm và tải lại kết quả chuyển đổi hoặc PDF đã sửa. Nút **Sao lưu ZIP** xuất toàn bộ bản nháp và kết quả đã lưu; **Khôi phục** nhập lại ZIP sau khi đổi trình duyệt hoặc thiết bị. Dữ liệu chỉ lưu trong trình duyệt hiện tại. Lịch sử giữ tối đa 30 tệp, 20 MB mỗi tệp và 100 MB tổng; hãy tải kết quả lớn ngay sau khi xử lý.
+
+Kiểm thử: `node --test scripts/test_workspace.cjs`; kiểm thử giao diện trong Chrome khi server chạy ở cổng 4000: `node scripts/smoke_browser.cjs`. Bộ test Python dùng interpreter được gọi từ `run.cmd` nếu đã có Python.
+
 > **Hệ sinh thái Office toàn diện, bảo mật & siêu tốc dành cho PC, iOS và Android.**  
 > Chuẩn hoạt hình **RGP 9.0 Fluid Motion**, âm thanh phản hồi haptic xúc giác (Web Audio API), xử lý tệp 100% thật và tuyệt đối không dùng code giả demo.
 

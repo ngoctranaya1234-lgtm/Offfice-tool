@@ -1,4 +1,4 @@
-const CACHE_NAME = 'offfice-tool-cache-v2';
+const CACHE_NAME = 'offfice-tool-cache-v3';
 const STATIC_ASSETS = [
   './',
   './index.html',
@@ -22,6 +22,8 @@ const STATIC_ASSETS = [
   './src/engine/word-studio.js',
   './src/engine/sheet-studio.js',
   './src/engine/slides-studio.js',
+  './src/engine/workspace-store.js',
+  './src/workspace-ui.js',
   './src/app.js'
 ];
 

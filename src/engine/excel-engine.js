@@ -212,6 +212,7 @@ class ExcelEngine {
 
     rows.forEach(rowNode => {
       const rNum = parseInt(rowNode.getAttribute('r') || '1', 10) - 1;
+      if (!Number.isInteger(rNum) || rNum < 0 || rNum >= 500) throw new Error('Bảng tính vượt giới hạn 500 hàng.');
       while (resultGrid.length <= rNum) {
         resultGrid.push([]);
       }
@@ -228,6 +229,7 @@ class ExcelEngine {
           cIdx = cIdx * 26 + (colLetters.charCodeAt(i) - 64);
         }
         cIdx -= 1; // 0-indexed
+        if (cIdx < 0 || cIdx >= 100) throw new Error('Bảng tính vượt giới hạn 100 cột.');
 
         const type = c.getAttribute('t');
         const vNode = c.querySelector('v');

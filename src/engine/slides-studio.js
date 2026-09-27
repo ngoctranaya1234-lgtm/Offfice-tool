@@ -1,5 +1,8 @@
 // Presentation / Slides Studio - Presentation Creator with Fullscreen Slideshow & PPTX/PDF Export
 class SlidesStudio {
+  escapeText(value) {
+    return String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
+  }
   constructor() {
     this.slides = [];
     this.currentSlideIndex = 0;
@@ -112,6 +115,11 @@ class SlidesStudio {
   async handleImageUpload(e) {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type) || file.size > 5 * 1024 * 1024) {
+      alert('Chọn ảnh PNG, JPG hoặc WebP dưới 5 MB.');
+      e.target.value = '';
+      return;
+    }
     if (window.sound) window.sound.click();
 
     const reader = new FileReader();
@@ -138,10 +146,13 @@ class SlidesStudio {
           });
           this.renderCanvas();
           this.renderThumbnails();
+          document.dispatchEvent(new CustomEvent('workspace:dirty', { detail: { studio: 'slides' } }));
         }
       };
+      img.onerror = () => alert('Không thể đọc ảnh. Hãy chọn tệp ảnh khác.');
       img.src = dataUrl;
     };
+    reader.onerror = () => alert('Không thể mở tệp ảnh. Hãy thử lại.');
     reader.readAsDataURL(file);
     e.target.value = '';
   }
@@ -185,12 +196,12 @@ class SlidesStudio {
       const title = s.elements.find(e => e.type === 'heading')?.text || `Slide ${idx + 1}`;
       const isLight = this._isLightColor(s.bg);
       html += `
-        <div class="slide-thumb ${active ? 'thumb-active' : ''}" onclick="slidesStudio.selectSlide(${idx})">
+        <div class="slide-thumb ${active ? 'thumb-active' : ''}" role="button" tabindex="0" aria-label="Mở slide ${idx + 1}" onclick="slidesStudio.selectSlide(${idx})" onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); slidesStudio.selectSlide(${idx}); }">
           <div class="thumb-header">
             <span>Slide ${idx + 1}</span>
           </div>
           <div class="thumb-preview" style="background:${s.bg}">
-            <div class="thumb-title-text" style="color: ${isLight ? '#0f172a' : '#f8fafc'}">${title}</div>
+            <div class="thumb-title-text" style="color: ${isLight ? '#0f172a' : '#f8fafc'}">${this.escapeText(title)}</div>
           </div>
         </div>
       `;
@@ -240,7 +251,7 @@ class SlidesStudio {
                data-idx="${idx}" 
                style="position: absolute; left: ${el.x}px; top: ${el.y}px; color: ${el.color}; font-size: ${el.size}px; font-weight: ${el.bold ? 'bold' : 'normal'}; line-height: 1.4; ${extra}"
                contenteditable="true">
-            ${el.text}
+            ${this.escapeText(el.text)}
           </div>
         `;
       }
@@ -256,6 +267,7 @@ class SlidesStudio {
         if (slide.elements[idx]) {
           slide.elements[idx].text = node.innerText.trim();
           this.renderThumbnails();
+          document.dispatchEvent(new CustomEvent('workspace:dirty', { detail: { studio: 'slides' } }));
         }
       });
     });
@@ -323,7 +335,7 @@ class SlidesStudio {
         }
         html += `
           <div style="position: absolute; left: ${el.x * 1.5}px; top: ${el.y * 1.5}px; color: ${el.color}; font-size: ${el.size * 1.4}px; font-weight: ${el.bold ? 'bold' : 'normal'}; line-height: 1.4; ${extra}">
-            ${el.text}
+            ${this.escapeText(el.text)}
           </div>
         `;
       }

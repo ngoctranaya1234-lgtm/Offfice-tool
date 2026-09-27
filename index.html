@@ -39,43 +39,49 @@
   <script src="src/engine/word-studio.js"></script>
   <script src="src/engine/sheet-studio.js"></script>
   <script src="src/engine/slides-studio.js"></script>
+  <script src="src/engine/workspace-store.js"></script>
   <script src="src/app.js"></script>
+  <script src="src/workspace-ui.js"></script>
 </head>
 <body>
 
   <!-- Top App Header -->
   <header class="app-header">
-    <div class="brand" onclick="window.switchTab('convert')">
+    <button class="brand" type="button" onclick="window.switchTab('convert')" aria-label="Về trang chuyển đổi">
       <div class="brand-icon">
         <i data-lucide="layers"></i>
       </div>
       <div class="brand-text">
         <h1>Offfice tool</h1>
-        <p>Pro Office & Conversion Suite</p>
+        <p>Office Studio</p>
       </div>
-    </div>
+    </button>
 
     <!-- Desktop Navigation Tabs -->
     <nav class="main-nav">
       <button class="nav-tab active" data-tab="convert">
         <i data-lucide="repeat"></i>
-        <span>Chuyển Đổi Tệp</span>
+        <span>Chuyển đổi</span>
       </button>
       <button class="nav-tab" data-tab="pdf">
         <i data-lucide="file-text"></i>
-        <span>Chỉnh Sửa PDF</span>
+        <span>PDF</span>
       </button>
       <button class="nav-tab" data-tab="word">
         <i data-lucide="file-edit"></i>
-        <span>Word (Văn bản)</span>
+        <span>Word</span>
       </button>
       <button class="nav-tab" data-tab="sheet">
         <i data-lucide="table"></i>
-        <span>Excel (Bảng tính)</span>
+        <span>Excel</span>
       </button>
       <button class="nav-tab" data-tab="slides">
         <i data-lucide="presentation"></i>
-        <span>PowerPoint</span>
+        <span>Slides</span>
+      </button>
+      <button class="nav-tab" data-tab="workspace">
+        <i data-lucide="history"></i>
+        <span>Gần đây</span>
       </button>
     </nav>
 
@@ -111,10 +117,10 @@
       <div class="surface-card rgp-glow" style="margin-bottom: 1.5rem;">
         <h2 style="font-size: 1.3rem; margin-bottom: 0.35rem; display: flex; align-items: center; gap: 8px;">
           <i data-lucide="sparkles" style="color: var(--accent-cyan);"></i>
-          Trung Tâm Chuyển Đổi Tài Liệu Đa Chiều
+          Chuyển đổi tài liệu
         </h2>
         <p style="color: var(--text-muted); font-size: 0.85rem;">
-          Chuyển đổi thực tế 100% không giả lập, giữ nguyên cấu trúc bảng biểu, văn bản, font chữ và số liệu.
+          Chuyển đổi Word, PDF, Excel và ảnh. Xem lại bản xuất trước khi chia sẻ tài liệu quan trọng.
         </p>
       </div>
 
@@ -186,15 +192,15 @@
 
       <!-- File Upload & Conversion Container -->
       <div class="surface-card">
-        <div id="convert-dropzone" class="dropzone">
+        <div id="convert-dropzone" class="dropzone" role="button" tabindex="0" aria-label="Chọn tệp để chuyển đổi">
           <div class="dropzone-icon">
             <i data-lucide="upload-cloud"></i>
           </div>
           <div class="dropzone-text">
             <h3>Kéo thả tệp vào đây hoặc nhấn để chọn từ thiết bị</h3>
-            <p>Hỗ trợ tệp .docx, .pdf, .xlsx, .png, .jpg (xử lý trực tiếp, bảo mật tuyệt đối)</p>
+            <p>Hỗ trợ .docx, .pdf, .xlsx, .png, .jpg · tối đa 50 MB mỗi tệp</p>
           </div>
-          <input type="file" id="convert-file-input" style="display: none;" accept=".docx,.doc">
+          <input type="file" id="convert-file-input" style="display: none;" accept=".docx">
         </div>
 
         <!-- Selected File Meta Card -->
@@ -232,7 +238,7 @@
             </div>
             <div class="file-meta">
               <h4 id="download-file-name">result.pdf</h4>
-              <p style="color: #34d399;">Chuyển đổi hoàn tất thành công 100%!</p>
+              <p style="color: #34d399;">Chuyển đổi hoàn tất. Có thể tải lại tại Gần đây.</p>
             </div>
           </div>
           <button id="convert-download-btn" class="btn-primary" style="background: linear-gradient(135deg, #10b981, #06b6d4);">
@@ -251,7 +257,7 @@
         <div>
           <h2 style="font-size: 1.25rem; display: flex; align-items: center; gap: 8px;">
             <i data-lucide="file-text" style="color: #f43f5e;"></i>
-            Professional PDF Studio & Editor Suite
+            Chỉnh sửa PDF
           </h2>
           <p style="color: var(--text-muted); font-size: 0.82rem;">Bộ công cụ chỉnh sửa PDF toàn diện: Bút vẽ, dạ quang, ghi đè chữ, chữ ký 3 chế độ, xoay, gộp, tách trang.</p>
         </div>
@@ -283,9 +289,9 @@
             <i data-lucide="printer"></i>
             <span>In Trực Tiếp</span>
           </button>
-          <button class="btn-primary" onclick="window.downloadEditedPdf()">
+          <button id="pdf-download-btn" class="btn-primary" onclick="window.downloadEditedPdf()">
             <i data-lucide="save"></i>
-            <span>Xuất File PDF Đã Sửa</span>
+            <span>Tải PDF đã sửa</span>
           </button>
         </div>
       </div>
@@ -383,34 +389,34 @@
             <h4>Thao Tác Trang Chuyên Nghiệp</h4>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
               <button class="btn-secondary" onclick="window.rotateCurrentPage(90)">
-                <i data-lucide="rotate-cw"></i><span>Xoay phải 90°</span>
+                <i data-lucide="rotate-cw"></i><span>Xoay phải</span>
               </button>
               <button class="btn-secondary" onclick="window.rotateCurrentPage(-90)">
-                <i data-lucide="rotate-ccw"></i><span>Xoay trái 90°</span>
+                <i data-lucide="rotate-ccw"></i><span>Xoay trái</span>
               </button>
               <button class="btn-secondary" onclick="window.duplicateCurrentPage()">
-                <i data-lucide="copy"></i><span>Nhân bản trang</span>
+                <i data-lucide="copy"></i><span>Nhân bản</span>
               </button>
               <button class="btn-secondary" onclick="window.insertBlankPage()">
-                <i data-lucide="plus-square"></i><span>Thêm trang trắng</span>
+                <i data-lucide="plus-square"></i><span>Thêm trang</span>
               </button>
               <button class="btn-secondary" onclick="window.moveCurrentPage(-1)">
-                <i data-lucide="arrow-up"></i><span>Di chuyển lên</span>
+                <i data-lucide="arrow-up"></i><span>Lên</span>
               </button>
               <button class="btn-secondary" onclick="window.moveCurrentPage(1)">
-                <i data-lucide="arrow-down"></i><span>Di chuyển xuống</span>
+                <i data-lucide="arrow-down"></i><span>Xuống</span>
               </button>
             </div>
             <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
               <button class="btn-secondary" style="flex: 1;" onclick="window.applyBatesNumbering()" title="Đánh số thứ tự toàn bộ trang">
-                <i data-lucide="hash"></i><span>Đánh số trang</span>
+                <i data-lucide="hash"></i><span>Đánh số</span>
               </button>
               <button class="btn-secondary" style="flex: 1;" onclick="window.extractCurrentPageText()" title="Trích xuất toàn bộ chữ sang Clipboard">
-                <i data-lucide="copy"></i><span>Trích xuất chữ</span>
+                <i data-lucide="copy"></i><span>Lấy chữ</span>
               </button>
             </div>
             <button class="btn-secondary" style="width: 100%; margin-top: 0.5rem; color: #f43f5e;" onclick="window.deleteCurrentPage()">
-              <i data-lucide="trash-2"></i><span>Xóa trang hiện tại</span>
+              <i data-lucide="trash-2"></i><span>Xóa trang</span>
             </button>
           </div>
 
@@ -419,11 +425,11 @@
             <div style="display: flex; flex-direction: column; gap: 0.5rem;">
               <button class="btn-secondary" onclick="window.openWatermarkModal()">
                 <i data-lucide="stamp"></i>
-                <span>Đóng Dấu Bản Quyền (Tiếng Việt 100%)</span>
+                <span>Đóng dấu bản quyền</span>
               </button>
               <button class="btn-secondary" onclick="window.openSignatureModal()">
                 <i data-lucide="pen-tool"></i>
-                <span>Ký Tên Điện Tử (Vẽ / Gõ / Tải Ảnh)</span>
+                <span>Ký tên điện tử</span>
               </button>
               <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem;">
                 <button class="btn-secondary" style="padding: 5px; font-size: 0.74rem; color: #10b981;" onclick="window.applyPresetStamp('approved')">[ĐÃ DUYỆT]</button>
@@ -794,7 +800,40 @@
       </div>
     </section>
 
+    <section id="view-workspace" class="tab-view" aria-labelledby="workspace-title">
+      <div class="surface-card workspace-hero">
+        <div>
+          <span class="workspace-eyebrow">CỤC BỘ TRÊN THIẾT BỊ</span>
+          <h2 id="workspace-title">Không gian làm việc</h2>
+          <p>Bản nháp tự lưu và kết quả chuyển đổi gần đây. Dữ liệu chỉ nằm trong trình duyệt này cho đến khi bạn tải bản sao lưu.</p>
+          <span id="workspace-save-status" class="workspace-save-status" role="status">Đang mở bộ nhớ...</span>
+        </div>
+        <div class="workspace-actions">
+          <button id="workspace-export" class="btn-secondary" type="button"><i data-lucide="archive"></i><span>Sao lưu ZIP</span></button>
+          <label class="btn-secondary workspace-file-label"><i data-lucide="archive-restore"></i><span>Khôi phục</span><input id="workspace-import" type="file" accept=".zip,application/zip" hidden></label>
+        </div>
+      </div>
+      <div id="workspace-notice" class="workspace-notice hidden" role="status" aria-live="polite"></div>
+      <div class="workspace-stats" aria-label="Tổng quan không gian làm việc">
+        <div class="surface-card workspace-stat"><span>Bản nháp</span><strong id="workspace-draft-count">0</strong></div>
+        <div class="surface-card workspace-stat"><span>Kết quả đã lưu</span><strong id="workspace-history-count">0</strong></div>
+        <div class="surface-card workspace-stat"><span>Dung lượng kết quả</span><strong id="workspace-history-size">0 B</strong></div>
+      </div>
+      <div class="workspace-section-head"><div><h3>Bản nháp đang làm</h3><p>Word, Excel và Slides được tự lưu sau khi chỉnh sửa.</p></div></div>
+      <div id="workspace-drafts" class="workspace-drafts" aria-live="polite"></div>
+      <div class="workspace-section-head workspace-history-head">
+        <div><h3>Kết quả gần đây</h3><p>Tối đa 30 tệp, mỗi tệp đến 20 MB, tổng 100 MB.</p></div>
+        <div class="workspace-filters">
+          <label class="sr-only" for="workspace-search">Tìm theo tên tệp</label>
+          <input id="workspace-search" type="search" placeholder="Tìm tên tệp..." autocomplete="off">
+          <label class="sr-only" for="workspace-filter">Lọc kiểu chuyển đổi</label>
+          <select id="workspace-filter"><option value="all">Tất cả loại</option><option value="word-to-pdf">Word → PDF</option><option value="pdf-to-word">PDF → Word</option><option value="pdf-to-excel">PDF → Excel</option><option value="excel-to-pdf">Excel → PDF</option><option value="img-to-pdf">Ảnh → PDF</option><option value="pdf-to-img">PDF → Ảnh</option><option value="compress-pdf">Nén PDF</option><option value="pdf-edited">PDF đã sửa</option></select>
+        </div>
+      </div>
+      <div id="workspace-history" class="workspace-history" aria-live="polite"></div>
+    </section>
   </main>
+  <div id="workspace-toast" class="workspace-toast hidden" role="status" aria-live="polite"></div>
 
   <!-- Mobile Bottom Navigation (Responsive) -->
   <nav class="mobile-nav-bar">
@@ -818,24 +857,28 @@
       <i data-lucide="presentation"></i>
       <span>Slides</span>
     </button>
+    <button class="mobile-nav-item" data-tab="workspace">
+      <i data-lucide="history"></i>
+      <span>Gần đây</span>
+    </button>
   </nav>
 
   <!-- MODAL: Advanced Watermark (Text & Image Logo) -->
-  <div id="watermark-modal" class="modal-overlay hidden">
+  <div id="watermark-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-label="Đóng dấu bản quyền">
     <div class="modal-card">
       <h3 style="font-size: 1.15rem; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 8px;">
         <i data-lucide="stamp" style="color: var(--accent-cyan);"></i>
-        Đóng Dấu Bản Quyền Đa Năng (Watermark Pro)
+        Đóng dấu bản quyền
       </h3>
       <div class="modal-tabs">
-        <button id="wm-tab-text-btn" class="modal-tab-btn active" onclick="window.switchWatermarkTab('text')">Đóng Dấu Văn Bản (Tiếng Việt)</button>
-        <button id="wm-tab-img-btn" class="modal-tab-btn" onclick="window.switchWatermarkTab('image')">Đóng Dấu Logo Hình Ảnh</button>
+        <button id="wm-tab-text-btn" class="modal-tab-btn active" onclick="window.switchWatermarkTab('text')">Văn bản</button>
+        <button id="wm-tab-img-btn" class="modal-tab-btn" onclick="window.switchWatermarkTab('image')">Ảnh / logo</button>
       </div>
 
       <!-- Watermark Text Settings -->
       <div id="wm-pane-text" style="display: flex; flex-direction: column; gap: 0.85rem; font-size: 0.85rem;">
         <div>
-          <label style="display: block; margin-bottom: 4px; color: var(--text-muted);">Nội dung chữ đóng dấu (Hỗ trợ 100% tiếng Việt có dấu):</label>
+          <label style="display: block; margin-bottom: 4px; color: var(--text-muted);">Nội dung chữ đóng dấu:</label>
           <input type="text" id="wm-text-input" placeholder="Nhập chữ đóng dấu (Ví dụ: BẢN QUYỀN, BẢO MẬT, DỰ THẢO)..." style="width: 100%; padding: 8px; border-radius: 6px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-subtle); color: white;">
         </div>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
@@ -884,16 +927,16 @@
   </div>
 
   <!-- MODAL: Digital Signature Suite (3-in-1: Draw, Calligraphy, Upload) -->
-  <div id="signature-modal" class="modal-overlay hidden">
+  <div id="signature-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-label="Thêm chữ ký">
     <div class="modal-card">
       <h3 style="font-size: 1.15rem; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 8px;">
         <i data-lucide="pen-tool" style="color: var(--accent-emerald);"></i>
-        Ký Tên Điện Tử Đa Chế Độ
+        Thêm chữ ký
       </h3>
       <div class="modal-tabs">
-        <button id="sig-tab-draw-btn" class="modal-tab-btn active" onclick="window.switchSigTab('draw')">1. Vẽ Bằng Tay / Chuột</button>
-        <button id="sig-tab-type-btn" class="modal-tab-btn" onclick="window.switchSigTab('type')">2. Gõ Chữ Nghệ Thuật</button>
-        <button id="sig-tab-upload-btn" class="modal-tab-btn" onclick="window.switchSigTab('upload')">3. Tải Ảnh Con Dấu</button>
+        <button id="sig-tab-draw-btn" class="modal-tab-btn active" onclick="window.switchSigTab('draw')">Vẽ</button>
+        <button id="sig-tab-type-btn" class="modal-tab-btn" onclick="window.switchSigTab('type')">Gõ chữ</button>
+        <button id="sig-tab-upload-btn" class="modal-tab-btn" onclick="window.switchSigTab('upload')">Tải ảnh</button>
       </div>
 
       <!-- Tab 1: Draw Pad -->
@@ -929,7 +972,7 @@
   </div>
 
   <!-- MODAL: Whiteout & Replace Text (Ghi đè văn bản) -->
-  <div id="whiteout-modal" class="modal-overlay hidden">
+  <div id="whiteout-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-label="Ghi đè văn bản PDF">
     <div class="modal-card">
       <h3 style="font-size: 1.15rem; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 8px;">
         <i data-lucide="edit-3" style="color: var(--accent-cyan);"></i>
@@ -966,7 +1009,7 @@
   </div>
 
   <!-- MODAL: Merge Multiple PDFs -->
-  <div id="merge-modal" class="modal-overlay hidden">
+  <div id="merge-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-label="Gộp PDF">
     <div class="modal-card">
       <h3 style="font-size: 1.15rem; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 8px;">
         <i data-lucide="combine" style="color: var(--accent-emerald);"></i>
@@ -985,7 +1028,7 @@
   </div>
 
   <!-- MODAL: Split PDF Pages -->
-  <div id="split-modal" class="modal-overlay hidden">
+  <div id="split-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-label="Tách PDF">
     <div class="modal-card">
       <h3 style="font-size: 1.15rem; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 8px;">
         <i data-lucide="scissors" style="color: var(--accent-amber);"></i>
@@ -1020,7 +1063,7 @@
   </div>
 
   <!-- MODAL: Excel Data Chart -->
-  <div id="sheet-chart-modal" class="modal-overlay hidden">
+  <div id="sheet-chart-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-label="Biểu đồ bảng tính">
     <div class="modal-card" style="max-width: 650px;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
         <h3 style="font-size: 1.15rem; display: flex; align-items: center; gap: 8px;">

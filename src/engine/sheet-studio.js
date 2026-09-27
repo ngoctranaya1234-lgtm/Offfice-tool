@@ -239,10 +239,11 @@ class SheetStudio {
         if (style.bg) inlineStyle += `background-color:${style.bg};`;
         if (style.align) inlineStyle += `text-align:${style.align};`;
 
+        const safeValue = String(evaluated ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
         html += `<td class="sheet-cell ${isActive ? 'cell-active' : ''}" 
                      data-r="${r}" data-c="${c}" 
                      style="${inlineStyle}" 
-                     contenteditable="true">${evaluated !== '' ? evaluated : ''}</td>`;
+                     contenteditable="true">${safeValue}</td>`;
       }
       html += '</tr>';
     }
@@ -324,6 +325,7 @@ class SheetStudio {
     }
     this.renderGrid();
     this.updateStatusBar(r, c);
+    document.dispatchEvent(new CustomEvent('workspace:dirty', { detail: { studio: 'sheet' } }));
   }
 
   toggleStyle(prop, val) {
