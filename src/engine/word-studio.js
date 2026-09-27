@@ -158,54 +158,82 @@ class WordStudio {
 
   async exportPdf(filename = 'Tai_lieu.pdf') {
     if (window.sound) window.sound.success();
-    const pdfDoc = await PDFLib.PDFDocument.create();
-    const font = await pdfDoc.embedFont(PDFLib.StandardFonts.Helvetica);
-    const fontBold = await pdfDoc.embedFont(PDFLib.StandardFonts.HelveticaBold);
 
-    let page = pdfDoc.addPage([595.28, 841.89]);
-    const margin = 50;
-    let y = 841.89 - margin;
-    const maxWidth = 595.28 - (margin * 2);
+    const PAGE_W = 1240;
+    const PAGE_H = 1754;
+    const MARGIN = 100;
+    const USABLE_W = PAGE_W - (MARGIN * 2);
+
+    const pages = [];
+    let currentCanvas = document.createElement('canvas');
+    currentCanvas.width = PAGE_W;
+    currentCanvas.height = PAGE_H;
+    let ctx = currentCanvas.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, PAGE_W, PAGE_H);
+    let curY = MARGIN;
+
+    function newPage() {
+      pages.push(currentCanvas);
+      currentCanvas = document.createElement('canvas');
+      currentCanvas.width = PAGE_W;
+      currentCanvas.height = PAGE_H;
+      ctx = currentCanvas.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, PAGE_W, PAGE_H);
+      curY = MARGIN;
+    }
 
     const nodes = this.editorEl.children;
     for (let i = 0; i < nodes.length; i++) {
       const node = nodes[i];
       const text = node.innerText.trim();
-      if (!text) continue;
-
-      const isHeading = ['H1', 'H2', 'H3'].includes(node.tagName);
-      const activeFont = isHeading ? fontBold : font;
-      const fontSize = node.tagName === 'H1' ? 18 : (node.tagName === 'H2' ? 14 : 11);
-      const leading = isHeading ? 24 : 16;
-
-      if (y < margin + 40) {
-        page = pdfDoc.addPage([595.28, 841.89]);
-        y = 841.89 - margin;
+      if (!text) {
+        curY += 16;
+        continue;
       }
+
+      const isH1 = node.tagName === 'H1';
+      const isH2 = node.tagName === 'H2';
+      const isH3 = node.tagName === 'H3';
+      const fontSize = isH1 ? 32 : (isH2 ? 26 : (isH3 ? 22 : 18));
+      const lineHeight = isH1 ? 44 : (isH2 ? 36 : 28);
+      const isBold = isH1 || isH2 || isH3 || node.querySelector('b');
+
+      ctx.font = `${isBold ? 'bold' : 'normal'} ${fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif`;
+      ctx.fillStyle = isH1 ? '#0f172a' : '#1e293b';
 
       const words = text.split(' ');
       let currentLine = '';
 
       for (const word of words) {
         const testLine = currentLine ? `${currentLine} ${word}` : word;
-        const textWidth = activeFont.widthOfTextAtSize(testLine, fontSize);
-        if (textWidth > maxWidth && currentLine) {
-          page.drawText(currentLine, { x: margin, y: y, size: fontSize, font: activeFont, color: PDFLib.rgb(0.1, 0.15, 0.2) });
-          y -= leading;
+        const textWidth = ctx.measureText(testLine).width;
+        if (textWidth > USABLE_W && currentLine) {
+          if (curY + lineHeight > PAGE_H - MARGIN) newPage();
+          ctx.fillText(currentLine, MARGIN, curY);
+          curY += lineHeight;
           currentLine = word;
-          if (y < margin + 40) {
-            page = pdfDoc.addPage([595.28, 841.89]);
-            y = 841.89 - margin;
-          }
         } else {
           currentLine = testLine;
         }
       }
 
       if (currentLine) {
-        page.drawText(currentLine, { x: margin, y: y, size: fontSize, font: activeFont, color: PDFLib.rgb(0.1, 0.15, 0.2) });
-        y -= leading + 4;
+        if (curY + lineHeight > PAGE_H - MARGIN) newPage();
+        ctx.fillText(currentLine, MARGIN, curY);
+        curY += lineHeight + 8;
       }
+    }
+    pages.push(currentCanvas);
+
+    const pdfDoc = await PDFLib.PDFDocument.create();
+    for (const pCanvas of pages) {
+      const imgDataUrl = pCanvas.toDataURL('image/jpeg', 0.95);
+      const imgBytes = await fetch(imgDataUrl).then(r => r.arrayBuffer());
+      const img = await pdfDoc.embedJpg(imgBytes);
+      const page = pdfDoc.addPage([595.28, 841.89]);
+      page.drawImage(img, { x: 0, y: 0, width: 595.28, height: 841.89 });
     }
 
     const pdfBytes = await pdfDoc.save();

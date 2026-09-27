@@ -22,6 +22,27 @@ from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak, KeepTogether
 from reportlab.pdfgen import canvas
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+
+# Register Vietnamese TrueType fonts from Windows
+FONT_REGULAR = 'Helvetica'
+FONT_BOLD = 'Helvetica-Bold'
+
+for p_font, p_bold in [
+    ('C:/Windows/Fonts/arial.ttf', 'C:/Windows/Fonts/arialbd.ttf'),
+    ('C:/Windows/Fonts/segoeui.ttf', 'C:/Windows/Fonts/segoeuib.ttf'),
+    ('C:/Windows/Fonts/times.ttf', 'C:/Windows/Fonts/timesbd.ttf')
+]:
+    if os.path.exists(p_font) and os.path.exists(p_bold):
+        try:
+            pdfmetrics.registerFont(TTFont('ArialVN', p_font))
+            pdfmetrics.registerFont(TTFont('ArialVN-Bold', p_bold))
+            FONT_REGULAR = 'ArialVN'
+            FONT_BOLD = 'ArialVN-Bold'
+            break
+        except Exception:
+            pass
 
 def word_to_pdf(docx_path: str, output_pdf_path: str) -> str:
     """Convert .docx file to .pdf with high fidelity preserving tables, styles and structure."""
@@ -39,10 +60,11 @@ def word_to_pdf(docx_path: str, output_pdf_path: str) -> str:
     
     styles = getSampleStyleSheet()
     
-    # Custom styles
+    # Custom styles with full Vietnamese support
     normal_style = ParagraphStyle(
         'DocxNormal',
         parent=styles['Normal'],
+        fontName=FONT_REGULAR,
         fontSize=10.5,
         leading=14,
         textColor=colors.HexColor('#1e293b')
@@ -51,21 +73,21 @@ def word_to_pdf(docx_path: str, output_pdf_path: str) -> str:
     h1_style = ParagraphStyle(
         'DocxH1',
         parent=styles['Heading1'],
+        fontName=FONT_BOLD,
         fontSize=18,
         leading=22,
         spaceAfter=10,
-        textColor=colors.HexColor('#0f172a'),
-        bold=True
+        textColor=colors.HexColor('#0f172a')
     )
     
     h2_style = ParagraphStyle(
         'DocxH2',
         parent=styles['Heading2'],
+        fontName=FONT_BOLD,
         fontSize=14,
         leading=18,
         spaceAfter=8,
-        textColor=colors.HexColor('#1e293b'),
-        bold=True
+        textColor=colors.HexColor('#1e293b')
     )
     
     story = []

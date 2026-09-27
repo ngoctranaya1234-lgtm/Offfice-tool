@@ -220,16 +220,16 @@
     </section>
 
     <!-- ========================================== -->
-    <!-- 2. PDF STUDIO / EDITOR VIEW               -->
+    <!-- 2. PDF STUDIO / EDITOR VIEW (PRO UPGRADE) -->
     <!-- ========================================== -->
     <section id="view-pdf" class="tab-view">
       <div class="surface-card" style="margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
         <div>
           <h2 style="font-size: 1.25rem; display: flex; align-items: center; gap: 8px;">
             <i data-lucide="file-text" style="color: #f43f5e;"></i>
-            Menu Chỉnh Sửa File PDF Theo Ý Muốn
+            Professional PDF Studio & Editor Suite
           </h2>
-          <p style="color: var(--text-muted); font-size: 0.82rem;">Xoay trang, đóng dấu bản quyền, ký tên điện tử, gộp và tách trang PDF trực tiếp.</p>
+          <p style="color: var(--text-muted); font-size: 0.82rem;">Bộ công cụ chỉnh sửa PDF toàn diện: Bút vẽ, dạ quang, ghi đè chữ, chữ ký 3 chế độ, xoay, gộp, tách trang.</p>
         </div>
 
         <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
@@ -238,6 +238,18 @@
             <span>Mở File PDF</span>
             <input type="file" id="pdf-editor-upload" accept=".pdf" style="display: none;">
           </label>
+          <button class="btn-secondary" onclick="window.openMergeModal()">
+            <i data-lucide="combine"></i>
+            <span>Gộp Nhiều PDF</span>
+          </button>
+          <button class="btn-secondary" onclick="window.openSplitModal()">
+            <i data-lucide="scissors"></i>
+            <span>Tách Trang PDF</span>
+          </button>
+          <button class="btn-secondary" onclick="window.pdfEditorClient.printPdf()">
+            <i data-lucide="printer"></i>
+            <span>In Trực Tiếp</span>
+          </button>
           <button class="btn-primary" onclick="window.downloadEditedPdf()">
             <i data-lucide="save"></i>
             <span>Xuất File PDF Đã Sửa</span>
@@ -248,38 +260,105 @@
       <div class="pdf-studio-layout">
         <!-- Thumbnails Strip -->
         <div class="pdf-thumbs-pane">
-          <h4 style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.5rem;">CÁC TRANG PDF</h4>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+            <h4 style="font-size: 0.8rem; color: var(--text-muted);">CÁC TRANG PDF</h4>
+            <button class="btn-secondary" style="padding: 2px 6px; font-size: 0.72rem;" onclick="window.insertBlankPage()" title="Thêm trang trắng">+ Trang</button>
+          </div>
           <div id="pdf-thumbs-list">
             <p style="font-size: 0.8rem; color: var(--text-muted); text-align: center; padding: 2rem 0;">Chưa nạp file PDF</p>
           </div>
         </div>
 
-        <!-- Main PDF Canvas Viewport -->
+        <!-- Main PDF Canvas Viewport with Overlay Controls -->
         <div class="pdf-viewport-pane">
-          <div style="margin-bottom: 0.75rem; font-size: 0.82rem; color: var(--text-muted);">
-            Trang hiện tại: <b id="pdf-current-page-num" style="color: var(--accent-cyan);">0 / 0</b>
+          <!-- Interactive Top Tool Strip -->
+          <div class="pdf-control-bar">
+            <!-- Tool selection -->
+            <div style="display: flex; gap: 4px; align-items: center;">
+              <button id="pdf-tool-view" class="pdf-tool-btn active" onclick="window.setPdfTool('view')" title="Chế độ xem">
+                <i data-lucide="hand"></i><span>Xem</span>
+              </button>
+              <button id="pdf-tool-pen" class="pdf-tool-btn" onclick="window.setPdfTool('pen')" title="Bút vẽ tự do">
+                <i data-lucide="pen-tool"></i><span>Bút vẽ</span>
+              </button>
+              <button id="pdf-tool-highlighter" class="pdf-tool-btn" onclick="window.setPdfTool('highlighter')" title="Bút dạ quang tô sáng">
+                <i data-lucide="highlighter"></i><span>Dạ quang</span>
+              </button>
+              <button id="pdf-tool-whiteout" class="pdf-tool-btn" onclick="window.openWhiteoutModal()" title="Ghi đè chữ / Xóa chữ cũ">
+                <i data-lucide="edit-3"></i><span>Ghi đè chữ</span>
+              </button>
+              <button class="pdf-tool-btn" onclick="window.clearPageDrawings()" title="Xóa nét vẽ trên trang này">
+                <i data-lucide="eraser"></i><span>Tẩy nét vẽ</span>
+              </button>
+            </div>
+
+            <!-- Color and Stroke Picker -->
+            <div style="display: flex; gap: 6px; align-items: center;">
+              <input type="color" id="pdf-draw-color" value="#ef4444" title="Màu vẽ" style="width: 26px; height: 26px; border: none; background: transparent; cursor: pointer;">
+              <select id="pdf-draw-width" class="platform-select" style="padding: 2px 6px; font-size: 0.75rem;">
+                <option value="2">Nét mỏng (2px)</option>
+                <option value="4" selected>Nét vừa (4px)</option>
+                <option value="8">Nét đậm (8px)</option>
+                <option value="18">Dạ quang lớn (18px)</option>
+              </select>
+            </div>
+
+            <!-- Zoom and Page Telemetry -->
+            <div style="display: flex; gap: 6px; align-items: center; font-size: 0.8rem;">
+              <button class="pdf-tool-btn" onclick="window.zoomPdf(-0.2)" title="Thu nhỏ"><i data-lucide="zoom-out"></i></button>
+              <span id="pdf-zoom-val" style="color: var(--accent-cyan); font-weight: 600; min-width: 45px; text-align: center;">120%</span>
+              <button class="pdf-tool-btn" onclick="window.zoomPdf(0.2)" title="Phóng to"><i data-lucide="zoom-in"></i></button>
+              <span style="color: var(--border-subtle);">|</span>
+              <span>Trang: <b id="pdf-current-page-num" style="color: var(--accent-cyan);">0 / 0</b></span>
+            </div>
           </div>
-          <div class="pdf-canvas-wrapper">
+
+          <!-- Dual Layer Canvas (PDF Renderer + Transparent Vector Overlay) -->
+          <div id="pdf-canvas-container" class="pdf-canvas-wrapper">
             <canvas id="pdf-viewport-canvas"></canvas>
+            <canvas id="pdf-drawing-canvas"></canvas>
           </div>
         </div>
 
-        <!-- PDF Tools Panel -->
+        <!-- PDF Comprehensive Tools Panel -->
         <div class="pdf-tools-pane">
           <div class="tool-group">
-            <h4>Thao Tác Trang</h4>
-            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
-              <button class="btn-secondary" onclick="window.rotateCurrentPage()">
-                <i data-lucide="rotate-cw"></i>
-                <span>Xoay Phải 90°</span>
+            <h4>Thao Tác Trang Chuyên Nghiệp</h4>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+              <button class="btn-secondary" onclick="window.rotateCurrentPage(90)">
+                <i data-lucide="rotate-cw"></i><span>Xoay phải 90°</span>
               </button>
+              <button class="btn-secondary" onclick="window.rotateCurrentPage(-90)">
+                <i data-lucide="rotate-ccw"></i><span>Xoay trái 90°</span>
+              </button>
+              <button class="btn-secondary" onclick="window.duplicateCurrentPage()">
+                <i data-lucide="copy"></i><span>Nhân bản trang</span>
+              </button>
+              <button class="btn-secondary" onclick="window.insertBlankPage()">
+                <i data-lucide="plus-square"></i><span>Thêm trang trắng</span>
+              </button>
+              <button class="btn-secondary" onclick="window.moveCurrentPage(-1)">
+                <i data-lucide="arrow-up"></i><span>Di chuyển lên</span>
+              </button>
+              <button class="btn-secondary" onclick="window.moveCurrentPage(1)">
+                <i data-lucide="arrow-down"></i><span>Di chuyển xuống</span>
+              </button>
+            </div>
+            <button class="btn-secondary" style="width: 100%; margin-top: 0.5rem; color: #f43f5e;" onclick="window.deleteCurrentPage()">
+              <i data-lucide="trash-2"></i><span>Xóa trang hiện tại</span>
+            </button>
+          </div>
+
+          <div class="tool-group">
+            <h4>Đóng Dấu & Bản Quyền</h4>
+            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
               <button class="btn-secondary" onclick="window.openWatermarkModal()">
                 <i data-lucide="stamp"></i>
-                <span>Đóng Dấu Bản Quyền (Watermark)</span>
+                <span>Đóng Dấu Bản Quyền (Tiếng Việt 100%)</span>
               </button>
               <button class="btn-secondary" onclick="window.openSignatureModal()">
                 <i data-lucide="pen-tool"></i>
-                <span>Ký Tên Điện Tử</span>
+                <span>Ký Tên Điện Tử (Vẽ / Gõ / Tải Ảnh)</span>
               </button>
             </div>
           </div>
@@ -287,7 +366,7 @@
           <div class="tool-group">
             <h4>Bảo Mật & Thông Tin</h4>
             <p style="font-size: 0.78rem; color: var(--text-muted); line-height: 1.5;">
-              Mọi chỉnh sửa được biên dịch trực tiếp thông qua chuẩn PDF-Lib. Dữ liệu tài liệu được bảo vệ an toàn trên thiết bị của bạn.
+              Mọi chỉnh sửa được biên dịch trực tiếp thông qua chuẩn PDF-Lib và Canvas Vector Engine. Đảm bảo hỗ trợ 100% tiếng Việt có dấu, không lỗi WinAnsi.
             </p>
           </div>
         </div>
@@ -524,63 +603,187 @@
     </button>
   </nav>
 
-  <!-- MODAL: Watermark -->
+  <!-- MODAL: Advanced Watermark (Text & Image Logo) -->
   <div id="watermark-modal" class="modal-overlay hidden">
     <div class="modal-card">
-      <h3 style="font-size: 1.15rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 8px;">
+      <h3 style="font-size: 1.15rem; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 8px;">
         <i data-lucide="stamp" style="color: var(--accent-cyan);"></i>
-        Đóng Dấu Bản Quyền (Watermark)
+        Đóng Dấu Bản Quyền Đa Năng (Watermark Pro)
       </h3>
-      <div style="display: flex; flex-direction: column; gap: 0.85rem; font-size: 0.85rem;">
+      <div class="modal-tabs">
+        <button id="wm-tab-text-btn" class="modal-tab-btn active" onclick="window.switchWatermarkTab('text')">Đóng Dấu Văn Bản (Tiếng Việt)</button>
+        <button id="wm-tab-img-btn" class="modal-tab-btn" onclick="window.switchWatermarkTab('image')">Đóng Dấu Logo Hình Ảnh</button>
+      </div>
+
+      <!-- Watermark Text Settings -->
+      <div id="wm-pane-text" style="display: flex; flex-direction: column; gap: 0.85rem; font-size: 0.85rem;">
         <div>
-          <label style="display: block; margin-bottom: 4px; color: var(--text-muted);">Nội dung chữ đóng dấu:</label>
-          <input type="text" id="wm-text-input" value="BẢN QUYỀN - OFFFICE TOOL" style="width: 100%; padding: 8px; border-radius: 6px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-subtle); color: white;">
+          <label style="display: block; margin-bottom: 4px; color: var(--text-muted);">Nội dung chữ đóng dấu (Hỗ trợ 100% tiếng Việt có dấu):</label>
+          <input type="text" id="wm-text-input" value="BẢN QUYỀN - OFFFICE TOOL PRO" style="width: 100%; padding: 8px; border-radius: 6px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-subtle); color: white;">
         </div>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
           <div>
             <label style="display: block; margin-bottom: 4px; color: var(--text-muted);">Độ mờ đục (Opacity):</label>
-            <input type="range" id="wm-opacity-slider" min="0.1" max="1" step="0.05" value="0.3" style="width: 100%;">
+            <input type="range" id="wm-opacity-slider" min="0.1" max="1" step="0.05" value="0.25" style="width: 100%;">
           </div>
           <div>
-            <label style="display: block; margin-bottom: 4px; color: var(--text-muted);">Màu sắc:</label>
+            <label style="display: block; margin-bottom: 4px; color: var(--text-muted);">Màu sắc con dấu:</label>
             <input type="color" id="wm-color-picker" value="#ef4444" style="width: 100%; height: 32px; border: none; background: transparent; cursor: pointer;">
           </div>
         </div>
         <div>
-          <label style="display: block; margin-bottom: 4px; color: var(--text-muted);">Góc nghiêng:</label>
-          <select id="wm-angle-select" style="width: 100%; padding: 8px; border-radius: 6px; background: #0f172a; border: 1px solid var(--border-subtle); color: white;">
-            <option value="45">Nghiêng 45° (Đường chéo)</option>
-            <option value="0">Nằm ngang 0°</option>
+          <label style="display: block; margin-bottom: 4px; color: var(--text-muted);">Góc nghiêng chữ:</label>
+          <select id="wm-angle-select" class="platform-select" style="width: 100%;">
+            <option value="45">Nghiêng 45° (Đường chéo toàn trang)</option>
+            <option value="0">Nằm ngang 0° (Chính giữa)</option>
             <option value="-45">Nghiêng -45°</option>
           </select>
         </div>
       </div>
+
+      <!-- Watermark Image Settings -->
+      <div id="wm-pane-image" class="hidden" style="display: flex; flex-direction: column; gap: 0.85rem; font-size: 0.85rem;">
+        <div>
+          <label style="display: block; margin-bottom: 4px; color: var(--text-muted);">Chọn file logo / con dấu (PNG trong suốt hoặc JPG):</label>
+          <input type="file" id="wm-image-file-input" accept="image/*" style="width: 100%; padding: 6px; border-radius: 6px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-subtle); color: white;">
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div>
+            <label style="display: block; margin-bottom: 4px; color: var(--text-muted);">Độ mờ logo:</label>
+            <input type="range" id="wm-img-opacity" min="0.1" max="1" step="0.05" value="0.35" style="width: 100%;">
+          </div>
+          <div>
+            <label style="display: block; margin-bottom: 4px; color: var(--text-muted);">Kích thước (px):</label>
+            <input type="number" id="wm-img-size" value="220" min="50" max="600" style="width: 100%; padding: 6px; border-radius: 6px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-subtle); color: white;">
+          </div>
+        </div>
+      </div>
+
       <div style="display: flex; justify-content: flex-end; gap: 0.6rem; margin-top: 1.5rem;">
         <button class="btn-secondary" onclick="window.closeWatermarkModal()">Hủy</button>
-        <button class="btn-primary" onclick="window.applyWatermark()">Áp Dụng Cho Toàn Bộ Trang</button>
+        <button class="btn-primary" onclick="window.applyWatermark()">Áp Dụng Cho Tất Cả Các Trang</button>
       </div>
     </div>
   </div>
 
-  <!-- MODAL: Digital Signature Pad -->
+  <!-- MODAL: Digital Signature Suite (3-in-1: Draw, Calligraphy, Upload) -->
   <div id="signature-modal" class="modal-overlay hidden">
     <div class="modal-card">
-      <h3 style="font-size: 1.15rem; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 8px;">
+      <h3 style="font-size: 1.15rem; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 8px;">
         <i data-lucide="pen-tool" style="color: var(--accent-emerald);"></i>
-        Ký Tên Điện Tử Trực Tiếp
+        Ký Tên Điện Tử Đa Chế Độ
+      </h3>
+      <div class="modal-tabs">
+        <button id="sig-tab-draw-btn" class="modal-tab-btn active" onclick="window.switchSigTab('draw')">1. Vẽ Bằng Tay / Chuột</button>
+        <button id="sig-tab-type-btn" class="modal-tab-btn" onclick="window.switchSigTab('type')">2. Gõ Chữ Nghệ Thuật</button>
+        <button id="sig-tab-upload-btn" class="modal-tab-btn" onclick="window.switchSigTab('upload')">3. Tải Ảnh Con Dấu</button>
+      </div>
+
+      <!-- Tab 1: Draw Pad -->
+      <div id="sig-pane-draw">
+        <p style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 0.65rem;">
+          Dùng ngón tay (trên iPhone/Android) hoặc chuột (trên PC) để ký tự nhiên:
+        </p>
+        <div style="display: flex; justify-content: center; margin-bottom: 0.85rem;">
+          <canvas id="signature-pad-canvas" width="460" height="170"></canvas>
+        </div>
+        <button class="btn-secondary" style="font-size: 0.78rem;" onclick="window.clearSignature()">Xóa Ký Lại</button>
+      </div>
+
+      <!-- Tab 2: Type Calligraphy -->
+      <div id="sig-pane-type" class="hidden">
+        <label style="display: block; margin-bottom: 4px; font-size: 0.82rem; color: var(--text-muted);">Nhập họ tên của bạn:</label>
+        <input type="text" id="sig-type-input" value="Nguyễn Văn A" oninput="window.updateCalligraphyPreview()" style="width: 100%; padding: 8px; border-radius: 6px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-subtle); color: white; margin-bottom: 0.75rem;">
+        <div id="sig-calligraphy-preview" class="calligraphy-preview">Nguyễn Văn A</div>
+      </div>
+
+      <!-- Tab 3: Upload Image -->
+      <div id="sig-pane-upload" class="hidden">
+        <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.65rem;">Chọn ảnh chụp con dấu đỏ hoặc chữ ký có sẵn trên máy:</p>
+        <input type="file" id="sig-upload-input" accept="image/*" style="width: 100%; padding: 8px; border-radius: 6px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-subtle); color: white; margin-bottom: 0.75rem;">
+        <div id="sig-upload-preview" style="text-align: center; max-height: 120px; overflow: hidden;"></div>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 0.6rem; margin-top: 1.25rem;">
+        <button class="btn-secondary" onclick="document.getElementById('signature-modal').classList.add('hidden')">Đóng</button>
+        <button class="btn-primary" onclick="window.applySignature()">Đóng Dấu Chữ Ký Vào Trang</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Whiteout & Replace Text (Ghi đè văn bản) -->
+  <div id="whiteout-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <h3 style="font-size: 1.15rem; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 8px;">
+        <i data-lucide="edit-3" style="color: var(--accent-cyan);"></i>
+        Ghi Đè & Thay Thế Văn Bản Trực Tiếp
       </h3>
       <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1rem;">
-        Dùng ngón tay (trên điện thoại) hoặc chuột (trên PC) để vẽ chữ ký của bạn vào khung bên dưới.
+        Phủ trắng che chữ cũ và gõ chữ thay thế mới (Hỗ trợ 100% tiếng Việt có dấu).
       </p>
-      <div style="display: flex; justify-content: center; margin-bottom: 1rem;">
-        <canvas id="signature-pad-canvas" width="460" height="180"></canvas>
-      </div>
-      <div style="display: flex; justify-content: space-between; align-items: center;">
-        <button class="btn-secondary" onclick="window.clearSignature()">Xóa Ký Lại</button>
-        <div style="display: flex; gap: 0.5rem;">
-          <button class="btn-secondary" onclick="document.getElementById('signature-modal').classList.add('hidden')">Đóng</button>
-          <button class="btn-primary" onclick="window.applySignature()">Đóng Dấu Chữ Ký Vào Trang</button>
+      <div style="display: flex; flex-direction: column; gap: 0.85rem; font-size: 0.85rem;">
+        <div>
+          <label style="display: block; margin-bottom: 4px; color: var(--text-muted);">Văn bản mới:</label>
+          <input type="text" id="whiteout-text-input" placeholder="Nhập chữ cần thay thế..." style="width: 100%; padding: 8px; border-radius: 6px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-subtle); color: white;">
         </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.6rem;">
+          <div>
+            <label style="display: block; margin-bottom: 4px; color: var(--text-muted);">Cỡ chữ:</label>
+            <input type="number" id="whiteout-size-input" value="14" min="8" max="72" style="width: 100%; padding: 6px; border-radius: 6px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-subtle); color: white;">
+          </div>
+          <div>
+            <label style="display: block; margin-bottom: 4px; color: var(--text-muted);">Màu chữ:</label>
+            <input type="color" id="whiteout-color-input" value="#0f172a" style="width: 100%; height: 32px; border: none; background: transparent; cursor: pointer;">
+          </div>
+          <div>
+            <label style="display: block; margin-bottom: 4px; color: var(--text-muted);">Độ rộng che (px):</label>
+            <input type="number" id="whiteout-width-input" value="180" min="30" max="600" style="width: 100%; padding: 6px; border-radius: 6px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-subtle); color: white;">
+          </div>
+        </div>
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 0.6rem; margin-top: 1.5rem;">
+        <button class="btn-secondary" onclick="document.getElementById('whiteout-modal').classList.add('hidden')">Hủy</button>
+        <button class="btn-primary" onclick="window.applyWhiteoutText()">Ghi Đè Lên Trang Hiện Tại</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Merge Multiple PDFs -->
+  <div id="merge-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <h3 style="font-size: 1.15rem; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 8px;">
+        <i data-lucide="combine" style="color: var(--accent-emerald);"></i>
+        Gộp Nhiều Tệp PDF Thành Một File
+      </h3>
+      <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1rem;">
+        Chọn 2 hoặc nhiều tệp PDF từ thiết bị để ghép nối liên tiếp theo thứ tự.
+      </p>
+      <input type="file" id="merge-files-input" accept=".pdf" multiple style="width: 100%; padding: 8px; border-radius: 6px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-subtle); color: white; margin-bottom: 0.85rem;">
+      <div id="merge-files-list" style="max-height: 140px; overflow-y: auto; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1rem;"></div>
+      <div style="display: flex; justify-content: flex-end; gap: 0.6rem;">
+        <button class="btn-secondary" onclick="document.getElementById('merge-modal').classList.add('hidden')">Đóng</button>
+        <button class="btn-primary" onclick="window.executeMergePdf()">Bắt Đầu Gộp & Tải Về</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Split PDF Pages -->
+  <div id="split-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <h3 style="font-size: 1.15rem; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 8px;">
+        <i data-lucide="scissors" style="color: var(--accent-amber);"></i>
+        Tách Trang PDF
+      </h3>
+      <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1rem;">
+        Nhập dải trang bạn muốn trích xuất (Ví dụ: <b>1-3, 5</b> để lấy các trang 1, 2, 3 và 5).
+      </p>
+      <div>
+        <label style="display: block; margin-bottom: 4px; font-size: 0.82rem; color: var(--text-muted);">Dải trang cần tách:</label>
+        <input type="text" id="split-range-input" value="1-2" placeholder="Ví dụ: 1-3, 5" style="width: 100%; padding: 8px; border-radius: 6px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-subtle); color: white; margin-bottom: 1.25rem;">
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 0.6rem;">
+        <button class="btn-secondary" onclick="document.getElementById('split-modal').classList.add('hidden')">Hủy</button>
+        <button class="btn-primary" onclick="window.executeSplitPdf()">Tách Trang & Tải Về</button>
       </div>
     </div>
   </div>
