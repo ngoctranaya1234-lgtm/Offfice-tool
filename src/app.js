@@ -109,9 +109,14 @@ document.addEventListener('DOMContentLoaded', async () => {
       'pdf-to-word': '.pdf',
       'pdf-to-excel': '.pdf',
       'excel-to-pdf': '.xlsx,.xls',
-      'img-to-pdf': '.png,.jpg,.jpeg'
+      'img-to-pdf': '.png,.jpg,.jpeg,.webp',
+      'pdf-to-img': '.pdf',
+      'compress-pdf': '.pdf'
     };
-    if (fileInput) fileInput.accept = acceptMap[type] || '*';
+    if (fileInput) {
+      fileInput.accept = acceptMap[type] || '*';
+      fileInput.multiple = (type === 'img-to-pdf');
+    }
   };
 
   convertCards.forEach(card => {
@@ -119,6 +124,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       window.selectConvertType(card.getAttribute('data-type'));
     });
   });
+
+  let activeConvertFiles = null;
 
   if (dropzone && fileInput) {
     dropzone.addEventListener('click', () => fileInput.click());
@@ -131,24 +138,31 @@ document.addEventListener('DOMContentLoaded', async () => {
       e.preventDefault();
       dropzone.classList.remove('dragover');
       if (e.dataTransfer.files.length > 0) {
-        handleConvertFile(e.dataTransfer.files[0]);
+        handleConvertFiles(e.dataTransfer.files);
       }
     });
     fileInput.addEventListener('change', (e) => {
       if (e.target.files.length > 0) {
-        handleConvertFile(e.target.files[0]);
+        handleConvertFiles(e.target.files);
       }
     });
   }
 
-  function handleConvertFile(file) {
+  function handleConvertFiles(files) {
     if (window.sound) window.sound.swoop();
-    activeConvertFile = file;
+    activeConvertFiles = Array.from(files);
+    activeConvertFile = files[0];
 
     if (fileInfoCard) {
       fileInfoCard.classList.remove('hidden');
-      document.getElementById('file-info-name').innerText = file.name;
-      document.getElementById('file-info-size').innerText = `${(file.size / 1024).toFixed(1)} KB`;
+      if (files.length > 1) {
+        document.getElementById('file-info-name').innerText = `Đã chọn ${files.length} tệp (${files[0].name}, ...)`;
+        const totalSize = Array.from(files).reduce((acc, f) => acc + f.size, 0);
+        document.getElementById('file-info-size').innerText = `Tổng dung lượng: ${(totalSize / 1024).toFixed(1)} KB`;
+      } else {
+        document.getElementById('file-info-name').innerText = files[0].name;
+        document.getElementById('file-info-size').innerText = `${(files[0].size / 1024).toFixed(1)} KB`;
+      }
     }
     if (downloadCard) downloadCard.classList.add('hidden');
     if (progressWrap) progressWrap.classList.add('hidden');
@@ -180,7 +194,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         } else if (selectedConvertType === 'excel-to-pdf') {
           result = await window.converter.convertExcelToPdf(activeConvertFile, updateProgress);
         } else if (selectedConvertType === 'img-to-pdf') {
-          result = await window.converter.convertImageToPdf(activeConvertFile, updateProgress);
+          result = await window.converter.convertImageToPdf(activeConvertFiles || activeConvertFile, updateProgress);
+        } else if (selectedConvertType === 'pdf-to-img') {
+          result = await window.converter.convertPdfToImages(activeConvertFile, updateProgress);
+        } else if (selectedConvertType === 'compress-pdf') {
+          result = await window.converter.compressPdf(activeConvertFile, updateProgress);
         }
 
         if (result && result.blob) {
@@ -263,35 +281,122 @@ document.addEventListener('DOMContentLoaded', async () => {
       };
     };
 
+    let startX = 0, startY = 0;
+    let canvasSnapshot = null;
+
+    function drawArrow(ctx, fromx, fromy, tox, toy) {
+      const headlen = 16;
+      const dx = tox - fromx;
+      const dy = toy - fromy;
+      const angle = Math.atan2(dy, dx);
+      ctx.beginPath();
+      ctx.moveTo(fromx, fromy);
+      ctx.lineTo(tox, toy);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(tox, toy);
+      ctx.lineTo(tox - headlen * Math.cos(angle - Math.PI / 6), toy - headlen * Math.sin(angle - Math.PI / 6));
+      ctx.lineTo(tox - headlen * Math.cos(angle + Math.PI / 6), toy - headlen * Math.sin(angle + Math.PI / 6));
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    function showInlineTextInput(clientX, clientY, pos) {
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.placeholder = 'Gõ chữ tiếng Việt rồi bấm Enter...';
+      input.style.position = 'fixed';
+      input.style.left = `${clientX}px`;
+      input.style.top = `${clientY}px`;
+      input.style.zIndex = '9999';
+      input.style.background = '#0f172a';
+      const color = document.getElementById('pdf-draw-color')?.value || '#ef4444';
+      input.style.color = color;
+      input.style.border = '2px solid var(--accent-cyan)';
+      input.style.borderRadius = '6px';
+      input.style.padding = '6px 10px';
+      input.style.fontSize = '14px';
+      input.style.fontWeight = 'bold';
+      input.style.boxShadow = '0 6px 20px rgba(0,0,0,0.6)';
+      input.style.outline = 'none';
+
+      document.body.appendChild(input);
+      input.focus();
+
+      let committed = false;
+      const commit = async () => {
+        if (committed) return;
+        committed = true;
+        const val = input.value.trim();
+        input.remove();
+        if (!val) return;
+        drawCtx = pdfDrawingCanvas.getContext('2d');
+        drawCtx.font = 'bold 22px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif';
+        drawCtx.fillStyle = color;
+        drawCtx.fillText(val, pos.x, pos.y);
+
+        // Bake to PDF
+        try {
+          const dataUrl = pdfDrawingCanvas.toDataURL('image/png');
+          await window.pdfEditorClient.addDrawnOverlay(window.pdfEditorClient.currentPage, dataUrl);
+        } catch (err) {}
+      };
+
+      input.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Enter') commit();
+        if (ev.key === 'Escape') { committed = true; input.remove(); }
+      });
+      input.addEventListener('blur', commit);
+    }
+
     const startDraw = (e) => {
       if (activePdfTool === 'view') return;
-      isPdfDrawing = true;
       const pos = getPos(e);
+
+      if (activePdfTool === 'text') {
+        const cx = e.touches ? e.touches[0].clientX : e.clientX;
+        const cy = e.touches ? e.touches[0].clientY : e.clientY;
+        showInlineTextInput(cx, cy, pos);
+        return;
+      }
+
+      isPdfDrawing = true;
+      startX = pos.x;
+      startY = pos.y;
       drawCtx = pdfDrawingCanvas.getContext('2d');
-      drawCtx.beginPath();
-      drawCtx.moveTo(pos.x, pos.y);
+      canvasSnapshot = drawCtx.getImageData(0, 0, pdfDrawingCanvas.width, pdfDrawingCanvas.height);
 
       const color = document.getElementById('pdf-draw-color')?.value || '#ef4444';
       const width = parseInt(document.getElementById('pdf-draw-width')?.value || '4', 10);
 
-      if (activePdfTool === 'highlighter') {
-        drawCtx.strokeStyle = 'rgba(250, 204, 21, 0.45)';
-        drawCtx.lineWidth = Math.max(width, 18);
-        drawCtx.lineCap = 'square';
-      } else {
-        drawCtx.strokeStyle = color;
-        drawCtx.lineWidth = width;
-        drawCtx.lineCap = 'round';
-        drawCtx.lineJoin = 'round';
+      drawCtx.strokeStyle = activePdfTool === 'highlighter' ? 'rgba(250, 204, 21, 0.45)' : color;
+      drawCtx.fillStyle = color;
+      drawCtx.lineWidth = activePdfTool === 'highlighter' ? Math.max(width, 18) : width;
+      drawCtx.lineCap = activePdfTool === 'highlighter' ? 'square' : 'round';
+      drawCtx.lineJoin = 'round';
+
+      if (activePdfTool === 'pen' || activePdfTool === 'highlighter') {
+        drawCtx.beginPath();
+        drawCtx.moveTo(pos.x, pos.y);
       }
     };
 
     const draw = (e) => {
-      if (!isPdfDrawing || activePdfTool === 'view') return;
+      if (!isPdfDrawing || activePdfTool === 'view' || activePdfTool === 'text') return;
       e.preventDefault();
       const pos = getPos(e);
-      drawCtx.lineTo(pos.x, pos.y);
-      drawCtx.stroke();
+
+      if (activePdfTool === 'pen' || activePdfTool === 'highlighter') {
+        drawCtx.lineTo(pos.x, pos.y);
+        drawCtx.stroke();
+      } else if (activePdfTool === 'rect') {
+        drawCtx.putImageData(canvasSnapshot, 0, 0);
+        drawCtx.strokeRect(startX, startY, pos.x - startX, pos.y - startY);
+      } else if (activePdfTool === 'arrow') {
+        drawCtx.putImageData(canvasSnapshot, 0, 0);
+        drawArrow(drawCtx, startX, startY, pos.x, pos.y);
+      }
     };
 
     const endDraw = async () => {
@@ -310,6 +415,41 @@ document.addEventListener('DOMContentLoaded', async () => {
     pdfDrawingCanvas.ontouchstart = startDraw;
     pdfDrawingCanvas.ontouchmove = draw;
     window.addEventListener('touchend', endDraw);
+
+    // Night Mode Toggle
+    window.togglePdfNightMode = function() {
+      const container = document.getElementById('pdf-canvas-container');
+      if (!container) return;
+      const isNight = container.classList.toggle('pdf-night-mode');
+      if (window.sound) window.sound.click();
+      const btn = document.getElementById('pdf-toggle-night');
+      if (btn) btn.classList.toggle('active', isNight);
+    };
+
+    // Insert Image / Stamp on PDF
+    const insertImgUpload = document.getElementById('pdf-insert-image-upload');
+    if (insertImgUpload) {
+      insertImgUpload.addEventListener('change', async (e) => {
+        if (!window.pdfEditorClient.pdfDoc) {
+          alert('Vui lòng mở file PDF trước.');
+          return;
+        }
+        if (e.target.files.length > 0) {
+          const file = e.target.files[0];
+          const arrayBuffer = await file.arrayBuffer();
+          if (window.sound) window.sound.success();
+          await window.pdfEditorClient.addWatermarkImage(arrayBuffer, {
+            opacity: 0.95,
+            width: 200,
+            height: 200,
+            angle: 0
+          });
+          const bytes = await window.pdfEditorClient.exportPdfBytes();
+          loadedPdfArrayBuffer = bytes.buffer;
+          await renderPdfPages();
+        }
+      });
+    }
   }
 
   // Clear current page drawings
@@ -778,6 +918,30 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
       });
     }
+
+    window.toggleWordFindReplace = function() {
+      const bar = document.getElementById('word-find-replace-bar');
+      if (!bar) return;
+      const isHidden = bar.classList.toggle('hidden');
+      if (!isHidden) {
+        document.getElementById('word-find-input')?.focus();
+      }
+    };
+
+    window.executeWordReplace = function(replaceAll = false) {
+      const findVal = (document.getElementById('word-find-input')?.value || '').trim();
+      const replaceVal = document.getElementById('word-replace-input')?.value || '';
+      if (!findVal) {
+        alert('Vui lòng nhập từ khóa cần tìm.');
+        return;
+      }
+      const count = window.wordStudio.replaceText(findVal, replaceVal, replaceAll);
+      if (count > 0) {
+        alert(`Đã thay thế thành công ${count} vị trí.`);
+      } else {
+        alert(`Không tìm thấy từ khóa "${findVal}" trong tài liệu.`);
+      }
+    };
   }
 
   // 9. Sheet Studio Initialization
@@ -795,6 +959,22 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
       });
     }
+
+    window.insertQuickFormula = function(func) {
+      if (!window.sheetStudio) return;
+      if (window.sound) window.sound.click();
+      const cell = window.sheetStudio.activeCell;
+      const formulaInput = document.getElementById('sheet-formula-input');
+      if (!formulaInput) return;
+      const colName = window.sheetStudio._colName(cell.c);
+      const prevRow = Math.max(1, cell.r);
+      const range = `${colName}1:${colName}${prevRow}`;
+      const formula = `=${func}(${range})`;
+      formulaInput.value = formula;
+      if (!window.sheetStudio.data[cell.r]) window.sheetStudio.data[cell.r] = [];
+      window.sheetStudio.data[cell.r][cell.c] = formula;
+      window.sheetStudio.renderGrid();
+    };
   }
 
   // 10. Slides Studio Initialization
@@ -806,5 +986,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (window.converter) {
     await window.converter.checkServer();
     setInterval(() => window.converter.checkServer(), 10000);
+  }
+
+  // 12. Register PWA Service Worker for Offline Engine
+  if ('serviceWorker' in navigator && (window.location.protocol === 'https:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+    navigator.serviceWorker.register('./sw.js').then((reg) => {
+      console.log('Offfice tool PWA ServiceWorker registered:', reg.scope);
+    }).catch((err) => {
+      console.log('Offfice tool PWA ServiceWorker notice:', err);
+    });
   }
 });

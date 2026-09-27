@@ -578,7 +578,11 @@ html, body {
   box-shadow: 0 10px 35px rgba(0, 0, 0, 0.6);
   border-radius: 4px;
   background: white;
-  transition: transform 0.2s var(--ease-spring);
+  transition: transform 0.2s var(--ease-spring), filter 0.3s ease;
+}
+
+.pdf-canvas-wrapper.pdf-night-mode {
+  filter: invert(0.92) hue-rotate(180deg) contrast(1.15);
 }
 
 .pdf-canvas-wrapper canvas {
@@ -942,6 +946,47 @@ html, body {
   box-shadow: 0 15px 45px rgba(0, 0, 0, 0.6);
   position: relative;
   overflow: hidden;
+}
+
+.slide-element {
+  outline: none;
+  cursor: text;
+  transition: box-shadow 0.15s ease;
+  user-select: text;
+}
+
+.slide-element:hover,
+.slide-element:focus {
+  box-shadow: 0 0 0 1px var(--accent-cyan);
+}
+
+.slide-image-wrap {
+  position: relative;
+  display: inline-block;
+  cursor: pointer;
+}
+
+.slide-el-del {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #ef4444;
+  color: white;
+  border: none;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+.slide-image-wrap:hover .slide-el-del {
+  display: flex;
 }
 
 /* Fullscreen Presentation Modal */

@@ -529,29 +529,163 @@ class ConverterClient {
     };
   }
 
-  // 5. IMAGE TO PDF
-  async convertImageToPdf(file, onProgress) {
-    if (onProgress) onProgress(30, 'Đang nạp hình ảnh...');
-    const arrayBuffer = await file.arrayBuffer();
+  // 5. IMAGE TO PDF (Supports Single or Multi-Image compile)
+  async convertImageToPdf(files, onProgress) {
+    if (onProgress) onProgress(20, 'Đang nạp hình ảnh...');
+    const fileList = (files instanceof FileList || Array.isArray(files)) ? Array.from(files) : [files];
     const pdfDoc = await PDFLib.PDFDocument.create();
 
-    let image;
-    if (file.type.includes('png')) {
-      image = await pdfDoc.embedPng(arrayBuffer);
-    } else {
-      image = await pdfDoc.embedJpg(arrayBuffer);
-    }
+    for (let i = 0; i < fileList.length; i++) {
+      const f = fileList[i];
+      if (onProgress) {
+        const pct = 20 + Math.floor(((i + 1) / fileList.length) * 70);
+        onProgress(pct, `Đang xử lý ảnh ${i + 1}/${fileList.length}: ${f.name}...`);
+      }
+      const arrayBuffer = await f.arrayBuffer();
+      let image;
+      try {
+        if (f.type.includes('png')) {
+          image = await pdfDoc.embedPng(arrayBuffer);
+        } else {
+          image = await pdfDoc.embedJpg(arrayBuffer);
+        }
+      } catch (err) {
+        const dataUrl = await new Promise(res => {
+          const reader = new FileReader();
+          reader.onload = e => res(e.target.result);
+          reader.readAsDataURL(f);
+        });
+        const imgEl = new Image();
+        imgEl.src = dataUrl;
+        await new Promise(r => { imgEl.onload = r; });
+        const c = document.createElement('canvas');
+        c.width = imgEl.naturalWidth;
+        c.height = imgEl.naturalHeight;
+        c.getContext('2d').drawImage(imgEl, 0, 0);
+        const jpgData = c.toDataURL('image/jpeg', 0.95);
+        const bytes = await fetch(jpgData).then(r => r.arrayBuffer());
+        image = await pdfDoc.embedJpg(bytes);
+      }
 
-    const { width, height } = image.scale(1);
-    const page = pdfDoc.addPage([width, height]);
-    page.drawImage(image, { x: 0, y: 0, width, height });
+      const { width, height } = image.scale(1);
+      const page = pdfDoc.addPage([width, height]);
+      page.drawImage(image, { x: 0, y: 0, width, height });
+    }
 
     if (onProgress) onProgress(100, 'Hoàn thành!');
     const pdfBytes = await pdfDoc.save();
-    const stem = file.name.replace(/\.[^/.]+$/, "");
+    const stem = fileList[0].name.replace(/\.[^/.]+$/, "");
     return {
       blob: new Blob([pdfBytes], { type: 'application/pdf' }),
-      filename: `${stem}.pdf`
+      filename: fileList.length > 1 ? `${stem}_tong_hop.pdf` : `${stem}.pdf`
+    };
+  }
+
+  // 6. PDF TO IMAGES (JPG / PNG or ZIP Archive)
+  async convertPdfToImages(file, onProgress) {
+    if (onProgress) onProgress(15, 'Đang mở tệp PDF...');
+    const arrayBuffer = await file.arrayBuffer();
+
+    if (!window.pdfjsLib) {
+      throw new Error('PDF.js library is required to render PDF pages');
+    }
+
+    const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    const numPages = pdf.numPages;
+    const stem = file.name.replace(/\.[^/.]+$/, "");
+
+    if (numPages === 1) {
+      if (onProgress) onProgress(60, 'Đang kết xuất trang sang hình ảnh chất lượng cao...');
+      const page = await pdf.getPage(1);
+      const viewport = page.getViewport({ scale: 2.0 });
+      const canvas = document.createElement('canvas');
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+
+      const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.95));
+      if (onProgress) onProgress(100, 'Hoàn thành!');
+      return {
+        blob: blob,
+        filename: `${stem}_trang_1.jpg`
+      };
+    }
+
+    // Multi-page PDF: Bundle all pages into a ZIP archive
+    const zip = new JSZip();
+    for (let p = 1; p <= numPages; p++) {
+      if (onProgress) {
+        const pct = 20 + Math.floor((p / numPages) * 70);
+        onProgress(pct, `Đang kết xuất trang ${p}/${numPages}...`);
+      }
+      const page = await pdf.getPage(p);
+      const viewport = page.getViewport({ scale: 2.0 });
+      const canvas = document.createElement('canvas');
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+
+      const imgDataUrl = canvas.toDataURL('image/jpeg', 0.95);
+      const b64Data = imgDataUrl.replace(/^data:image\/jpeg;base64,/, '');
+      zip.file(`${stem}_trang_${p}.jpg`, b64Data, { base64: true });
+    }
+
+    if (onProgress) onProgress(95, 'Đang đóng gói file ZIP nén hình ảnh...');
+    const zipBlob = await zip.generateAsync({ type: 'blob' });
+    if (onProgress) onProgress(100, 'Hoàn thành!');
+    return {
+      blob: zipBlob,
+      filename: `${stem}_anh_cac_trang.zip`
+    };
+  }
+
+  // 7. COMPRESS PDF (Tối ưu & Giảm dung lượng tệp PDF)
+  async compressPdf(file, onProgress) {
+    if (onProgress) onProgress(15, 'Đang phân tích tệp PDF...');
+    const arrayBuffer = await file.arrayBuffer();
+
+    if (!window.pdfjsLib) {
+      throw new Error('PDF.js library is required');
+    }
+
+    const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    const numPages = pdf.numPages;
+    const stem = file.name.replace(/\.[^/.]+$/, "");
+
+    const newPdfDoc = await PDFLib.PDFDocument.create();
+
+    for (let p = 1; p <= numPages; p++) {
+      if (onProgress) {
+        const pct = 20 + Math.floor((p / numPages) * 70);
+        onProgress(pct, `Đang tối ưu trang ${p}/${numPages}...`);
+      }
+      const page = await pdf.getPage(p);
+      const viewport = page.getViewport({ scale: 1.35 });
+      const canvas = document.createElement('canvas');
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+
+      const imgDataUrl = canvas.toDataURL('image/jpeg', 0.70);
+      const imgBytes = await fetch(imgDataUrl).then(r => r.arrayBuffer());
+      const embeddedJpg = await newPdfDoc.embedJpg(imgBytes);
+
+      const [origW, origH] = [page.view[2] || 595.28, page.view[3] || 841.89];
+      const newPage = newPdfDoc.addPage([origW, origH]);
+      newPage.drawImage(embeddedJpg, {
+        x: 0,
+        y: 0,
+        width: origW,
+        height: origH
+      });
+    }
+
+    if (onProgress) onProgress(95, 'Đang tái cấu trúc luồng PDF...');
+    const compressedBytes = await newPdfDoc.save();
+    if (onProgress) onProgress(100, 'Nén hoàn tất!');
+    return {
+      blob: new Blob([compressedBytes], { type: 'application/pdf' }),
+      filename: `${stem}_da_nen.pdf`
     };
   }
 }

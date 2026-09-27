@@ -8,6 +8,11 @@
   <meta name="theme-color" content="#060911">
   <title>Offfice tool - Bộ Công Cụ Văn Phòng & Chuyển Đổi Đa Nền Tảng</title>
   
+  <!-- Favicon & PWA App Manifest -->
+  <link rel="icon" type="image/png" href="public/icons/favicon.png">
+  <link rel="apple-touch-icon" href="public/icons/apple-touch-icon.png">
+  <link rel="manifest" href="manifest.json">
+
   <!-- App Stylesheet -->
   <link rel="stylesheet" href="public/app.css">
 
@@ -154,10 +159,28 @@
         <div class="convert-card" data-type="img-to-pdf">
           <div class="card-top">
             <i data-lucide="image" style="color: #a855f7; width: 28px; height: 28px;"></i>
-            <span class="card-badge">Hình Ảnh</span>
+            <span class="card-badge">Ghép Nhiều Ảnh</span>
           </div>
           <div class="card-title">Ảnh sang PDF</div>
           <div class="card-desc">Ghép các file ảnh chụp hóa đơn, tài liệu (JPG/PNG) thành một file tài liệu PDF duy nhất.</div>
+        </div>
+
+        <div class="convert-card" data-type="pdf-to-img">
+          <div class="card-top">
+            <i data-lucide="images" style="color: #ec4899; width: 28px; height: 28px;"></i>
+            <span class="card-badge">Độ Nét Cao</span>
+          </div>
+          <div class="card-title">PDF sang Ảnh</div>
+          <div class="card-desc">Trích xuất từng trang PDF thành ảnh JPG sắc nét, tự động đóng gói file ZIP nén tải về.</div>
+        </div>
+
+        <div class="convert-card" data-type="compress-pdf">
+          <div class="card-top">
+            <i data-lucide="minimize-2" style="color: #06b6d4; width: 28px; height: 28px;"></i>
+            <span class="card-badge">Tối Ưu Zalo/Mail</span>
+          </div>
+          <div class="card-title">Nén Giảm Dung Lượng PDF</div>
+          <div class="card-desc">Thu nhỏ dung lượng file PDF thông minh tới 80% giúp gửi nhanh mà vẫn rõ nét chữ.</div>
         </div>
       </div>
 
@@ -247,6 +270,11 @@
             <i data-lucide="scissors"></i>
             <span>Tách Trang PDF</span>
           </button>
+          <label class="btn-secondary" style="cursor: pointer;" title="Chèn ảnh / Con dấu vào trang hiện tại">
+            <i data-lucide="image-plus"></i>
+            <span>Chèn Ảnh / Dấu</span>
+            <input type="file" id="pdf-insert-image-upload" accept="image/*" style="display: none;">
+          </label>
           <button class="btn-secondary" onclick="window.pdfEditorClient.printPdf()">
             <i data-lucide="printer"></i>
             <span>In Trực Tiếp</span>
@@ -275,7 +303,7 @@
           <!-- Interactive Top Tool Strip -->
           <div class="pdf-control-bar">
             <!-- Tool selection -->
-            <div style="display: flex; gap: 4px; align-items: center;">
+            <div style="display: flex; gap: 4px; align-items: center; flex-wrap: wrap;">
               <button id="pdf-tool-view" class="pdf-tool-btn active" onclick="window.setPdfTool('view')" title="Chế độ xem">
                 <i data-lucide="hand"></i><span>Xem</span>
               </button>
@@ -285,11 +313,20 @@
               <button id="pdf-tool-highlighter" class="pdf-tool-btn" onclick="window.setPdfTool('highlighter')" title="Bút dạ quang tô sáng">
                 <i data-lucide="highlighter"></i><span>Dạ quang</span>
               </button>
+              <button id="pdf-tool-text" class="pdf-tool-btn" onclick="window.setPdfTool('text')" title="Chèn chữ trực tiếp lên trang">
+                <i data-lucide="type"></i><span>Chữ</span>
+              </button>
+              <button id="pdf-tool-rect" class="pdf-tool-btn" onclick="window.setPdfTool('rect')" title="Vẽ khung chữ nhật">
+                <i data-lucide="square"></i><span>Khung</span>
+              </button>
+              <button id="pdf-tool-arrow" class="pdf-tool-btn" onclick="window.setPdfTool('arrow')" title="Vẽ mũi tên chỉ dẫn">
+                <i data-lucide="arrow-up-right"></i><span>Mũi tên</span>
+              </button>
               <button id="pdf-tool-whiteout" class="pdf-tool-btn" onclick="window.openWhiteoutModal()" title="Ghi đè chữ / Xóa chữ cũ">
-                <i data-lucide="edit-3"></i><span>Ghi đè chữ</span>
+                <i data-lucide="edit-3"></i><span>Ghi đè</span>
               </button>
               <button class="pdf-tool-btn" onclick="window.clearPageDrawings()" title="Xóa nét vẽ trên trang này">
-                <i data-lucide="eraser"></i><span>Tẩy nét vẽ</span>
+                <i data-lucide="eraser"></i><span>Tẩy nét</span>
               </button>
             </div>
 
@@ -306,6 +343,7 @@
 
             <!-- Zoom and Page Telemetry -->
             <div style="display: flex; gap: 6px; align-items: center; font-size: 0.8rem;">
+              <button class="pdf-tool-btn" id="pdf-toggle-night" onclick="window.togglePdfNightMode()" title="Chế độ đọc ban đêm"><i data-lucide="moon"></i></button>
               <button class="pdf-tool-btn" onclick="window.zoomPdf(-0.2)" title="Thu nhỏ"><i data-lucide="zoom-out"></i></button>
               <span id="pdf-zoom-val" style="color: var(--accent-cyan); font-weight: 600; min-width: 45px; text-align: center;">120%</span>
               <button class="pdf-tool-btn" onclick="window.zoomPdf(0.2)" title="Phóng to"><i data-lucide="zoom-in"></i></button>
@@ -395,7 +433,15 @@
           </label>
           <button class="btn-secondary" onclick="window.wordStudio.exportDocx()">
             <i data-lucide="file-down"></i>
-            <span>Lưu File .docx</span>
+            <span>Lưu .docx</span>
+          </button>
+          <button class="btn-secondary" onclick="window.wordStudio.exportMarkdown()">
+            <i data-lucide="file-code"></i>
+            <span>Xuất .md</span>
+          </button>
+          <button class="btn-secondary" onclick="window.wordStudio.exportHtml()">
+            <i data-lucide="code"></i>
+            <span>Xuất .html</span>
           </button>
           <button class="btn-primary" onclick="window.wordStudio.exportPdf()">
             <i data-lucide="download"></i>
@@ -407,6 +453,25 @@
       <div class="word-studio-wrap">
         <!-- Ribbon Toolbar -->
         <div class="ribbon-toolbar">
+          <!-- Font Family & Size -->
+          <div class="toolbar-group">
+            <select class="platform-select" style="padding: 2px 6px; font-size: 0.76rem;" onchange="window.wordStudio.setFont(this.value)">
+              <option value="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif">Font chuẩn</option>
+              <option value="'Times New Roman', Times, serif">Times New Roman</option>
+              <option value="Arial, Helvetica, sans-serif">Arial</option>
+              <option value="'Courier New', Courier, monospace">Courier New</option>
+              <option value="Georgia, serif">Georgia</option>
+            </select>
+            <select class="platform-select" style="padding: 2px 6px; font-size: 0.76rem;" onchange="window.wordStudio.setFontSize(this.value)">
+              <option value="3">14px</option>
+              <option value="1">10px</option>
+              <option value="2">12px</option>
+              <option value="4">18px</option>
+              <option value="5">24px</option>
+              <option value="6">32px</option>
+            </select>
+          </div>
+
           <div class="toolbar-group">
             <button class="tool-btn" onclick="window.wordStudio.insertHeading(1)" title="Tiêu đề 1">H1</button>
             <button class="tool-btn" onclick="window.wordStudio.insertHeading(2)" title="Tiêu đề 2">H2</button>
@@ -420,6 +485,18 @@
             <button class="tool-btn" onclick="window.wordStudio.exec('strikeThrough')" title="Gạch ngang"><s>S</s></button>
           </div>
 
+          <!-- Color Pickers -->
+          <div class="toolbar-group" style="gap: 6px;">
+            <label title="Màu chữ" style="display:flex;align-items:center;cursor:pointer;">
+              <span style="font-weight:bold;font-size:0.82rem;color:var(--accent-cyan);margin-right:2px;">A</span>
+              <input type="color" value="#0f172a" onchange="window.wordStudio.setTextColor(this.value)" style="width:20px;height:20px;border:none;background:transparent;cursor:pointer;">
+            </label>
+            <label title="Tô sáng (Highlight)" style="display:flex;align-items:center;cursor:pointer;">
+              <i data-lucide="highlighter" style="width:14px;height:14px;color:#facc15;margin-right:2px;"></i>
+              <input type="color" value="#fef08a" onchange="window.wordStudio.setHighlightColor(this.value)" style="width:20px;height:20px;border:none;background:transparent;cursor:pointer;">
+            </label>
+          </div>
+
           <div class="toolbar-group">
             <button class="tool-btn" onclick="window.wordStudio.exec('justifyLeft')" title="Căn trái"><i data-lucide="align-left"></i></button>
             <button class="tool-btn" onclick="window.wordStudio.exec('justifyCenter')" title="Căn giữa"><i data-lucide="align-center"></i></button>
@@ -431,12 +508,27 @@
             <button class="tool-btn" onclick="window.wordStudio.exec('insertUnorderedList')" title="Danh sách chấm"><i data-lucide="list"></i></button>
             <button class="tool-btn" onclick="window.wordStudio.exec('insertOrderedList')" title="Danh sách số"><i data-lucide="list-ordered"></i></button>
             <button class="tool-btn" onclick="window.wordStudio.insertTable(3, 3)" title="Chèn bảng biểu"><i data-lucide="table"></i></button>
+            <label class="tool-btn" style="cursor:pointer;" title="Chèn hình ảnh vào tài liệu">
+              <i data-lucide="image"></i>
+              <input type="file" id="word-insert-image" accept="image/*" style="display:none;" onchange="if(this.files.length)window.wordStudio.insertImageFile(this.files[0])">
+            </label>
+            <button class="tool-btn" onclick="window.wordStudio.insertHorizontalRule()" title="Đường kẻ ngang"><i data-lucide="minus"></i></button>
           </div>
 
           <div class="toolbar-group" style="border: none;">
+            <button class="tool-btn" onclick="window.toggleWordFindReplace()" title="Tìm & Thay thế (Ctrl+F)"><i data-lucide="search"></i></button>
             <button class="tool-btn" onclick="window.wordStudio.exec('undo')" title="Hoàn tác"><i data-lucide="undo"></i></button>
             <button class="tool-btn" onclick="window.wordStudio.exec('redo')" title="Làm lại"><i data-lucide="redo"></i></button>
           </div>
+        </div>
+
+        <!-- Find & Replace Floating Strip -->
+        <div id="word-find-replace-bar" class="hidden" style="display: flex; gap: 0.5rem; align-items: center; background: rgba(15, 23, 42, 0.95); padding: 0.5rem 0.75rem; border-radius: 8px; border: 1px solid var(--accent-cyan); flex-wrap: wrap;">
+          <input type="text" id="word-find-input" placeholder="Từ cần tìm..." style="padding: 4px 8px; border-radius: 6px; background: rgba(0,0,0,0.4); border: 1px solid var(--border-subtle); color: white; font-size: 0.8rem; width: 140px;">
+          <input type="text" id="word-replace-input" placeholder="Thay thế bằng..." style="padding: 4px 8px; border-radius: 6px; background: rgba(0,0,0,0.4); border: 1px solid var(--border-subtle); color: white; font-size: 0.8rem; width: 140px;">
+          <button class="btn-secondary" style="padding: 4px 10px; font-size: 0.78rem;" onclick="window.executeWordReplace(false)">Thay 1</button>
+          <button class="btn-primary" style="padding: 4px 10px; font-size: 0.78rem;" onclick="window.executeWordReplace(true)">Thay Tất Cả</button>
+          <button class="tool-btn" onclick="document.getElementById('word-find-replace-bar').classList.add('hidden')"><i data-lucide="x"></i></button>
         </div>
 
         <!-- A4 Realistic Page Canvas -->
@@ -474,6 +566,10 @@
             <i data-lucide="file-spreadsheet"></i>
             <span>Xuất .csv</span>
           </button>
+          <button class="btn-secondary" onclick="window.sheetStudio.exportPdf()">
+            <i data-lucide="file-text"></i>
+            <span>Xuất PDF</span>
+          </button>
           <button class="btn-primary" onclick="window.sheetStudio.exportXlsx()">
             <i data-lucide="download"></i>
             <span>Xuất File .xlsx</span>
@@ -483,14 +579,24 @@
 
       <div class="sheet-studio-wrap">
         <!-- Quick Formula & Formatting Bar -->
-        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; background: rgba(22, 33, 58, 0.85); padding: 0.5rem 0.75rem; border-radius: 8px; border: 1px solid var(--border-subtle);">
-          <button class="btn-secondary" style="padding: 4px 10px; font-size: 0.78rem;" onclick="window.sheetStudio.addRow()">+ Thêm Hàng</button>
-          <button class="btn-secondary" style="padding: 4px 10px; font-size: 0.78rem;" onclick="window.sheetStudio.addCol()">+ Thêm Cột</button>
+        <div style="display: flex; gap: 0.4rem; flex-wrap: wrap; align-items: center; background: rgba(22, 33, 58, 0.85); padding: 0.5rem 0.75rem; border-radius: 8px; border: 1px solid var(--border-subtle);">
+          <button class="btn-secondary" style="padding: 4px 8px; font-size: 0.76rem;" onclick="window.sheetStudio.addRow()">+ Hàng</button>
+          <button class="btn-secondary" style="padding: 4px 8px; font-size: 0.76rem;" onclick="window.sheetStudio.addCol()">+ Cột</button>
           <button class="tool-btn" onclick="window.sheetStudio.toggleStyle('bold')" title="In đậm"><b>B</b></button>
           <button class="tool-btn" onclick="window.sheetStudio.toggleStyle('italic')" title="In nghiêng"><i>I</i></button>
           <button class="tool-btn" onclick="window.sheetStudio.toggleStyle('color', '#10b981')" title="Màu xanh"><span style="color:#10b981;">A</span></button>
           <button class="tool-btn" onclick="window.sheetStudio.toggleStyle('color', '#38bdf8')" title="Màu xanh dương"><span style="color:#38bdf8;">A</span></button>
           <button class="tool-btn" onclick="window.sheetStudio.toggleStyle('color', '#f8fafc')" title="Mặc định">A</button>
+
+          <span style="color: var(--border-subtle); margin: 0 2px;">|</span>
+          <button class="btn-secondary" style="padding: 4px 7px; font-size: 0.75rem;" onclick="window.sheetStudio.sortByColumn(window.sheetStudio.activeCell.c, true)" title="Sắp xếp tăng dần A-Z">A-Z</button>
+          <button class="btn-secondary" style="padding: 4px 7px; font-size: 0.75rem;" onclick="window.sheetStudio.sortByColumn(window.sheetStudio.activeCell.c, false)" title="Sắp xếp giảm dần Z-A">Z-A</button>
+
+          <span style="color: var(--border-subtle); margin: 0 2px;">|</span>
+          <button class="btn-secondary" style="padding: 3px 6px; font-size: 0.74rem;" onclick="window.insertQuickFormula('SUM')">=SUM</button>
+          <button class="btn-secondary" style="padding: 3px 6px; font-size: 0.74rem;" onclick="window.insertQuickFormula('AVG')">=AVG</button>
+          <button class="btn-secondary" style="padding: 3px 6px; font-size: 0.74rem;" onclick="window.insertQuickFormula('MAX')">=MAX</button>
+          <button class="btn-secondary" style="padding: 3px 6px; font-size: 0.74rem;" onclick="window.insertQuickFormula('COUNT')">=COUNT</button>
         </div>
 
         <!-- Formula Input Bar -->
@@ -517,13 +623,17 @@
             <i data-lucide="presentation" style="color: #f59e0b;"></i>
             PowerPoint / Slides Studio
           </h2>
-          <p style="color: var(--text-muted); font-size: 0.82rem;">Thiết kế slide trình chiếu, trình chiếu toàn màn hình chuyên nghiệp và xuất file .pptx.</p>
+          <p style="color: var(--text-muted); font-size: 0.82rem;">Thiết kế slide trình chiếu, trình chiếu toàn màn hình chuyên nghiệp, xuất file .pptx và xuất tài liệu PDF.</p>
         </div>
 
         <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
           <button class="btn-secondary" onclick="window.slidesStudio.startPresentation()">
             <i data-lucide="play"></i>
             <span>Bắt Đầu Trình Chiếu</span>
+          </button>
+          <button class="btn-secondary" onclick="window.slidesStudio.exportPdf()">
+            <i data-lucide="file-text"></i>
+            <span>Xuất PDF</span>
           </button>
           <button class="btn-primary" onclick="window.slidesStudio.exportPptx()">
             <i data-lucide="download"></i>
@@ -535,8 +645,11 @@
       <div class="slides-layout">
         <!-- Slides List Sidebar -->
         <div class="slides-sidebar">
-          <div style="display: flex; gap: 0.5rem;">
-            <button class="btn-secondary" style="flex: 1; padding: 6px;" onclick="window.slidesStudio.addSlide()">+ Thêm Slide</button>
+          <div style="display: flex; gap: 0.4rem;">
+            <button class="btn-secondary" style="flex: 1; padding: 6px; font-size: 0.8rem;" onclick="window.slidesStudio.addSlide()">+ Thêm Slide</button>
+            <button class="btn-secondary" style="padding: 6px;" onclick="window.slidesStudio.duplicateCurrentSlide()" title="Nhân đôi slide">
+              <i data-lucide="copy"></i>
+            </button>
             <button class="btn-secondary" style="padding: 6px;" onclick="window.slidesStudio.deleteCurrentSlide()" title="Xóa slide">
               <i data-lucide="trash-2"></i>
             </button>
@@ -553,12 +666,15 @@
             <button class="btn-secondary" onclick="window.slidesStudio.addTextElement('heading')">+ Tiêu Đề</button>
             <button class="btn-secondary" onclick="window.slidesStudio.addTextElement('text')">+ Đoạn Văn</button>
             <button class="btn-secondary" onclick="window.slidesStudio.addTextElement('badge')">+ Nhãn Nổi Bật</button>
+            <button class="btn-secondary" onclick="document.getElementById('slides-img-upload').click()">+ Chèn Ảnh</button>
+            <input type="file" id="slides-img-upload" accept="image/*" style="display:none;" onchange="window.slidesStudio.handleImageUpload(event)">
             <span style="color: var(--border-subtle); margin: 0 4px;">|</span>
             <span style="font-size: 0.78rem; color: var(--text-muted);">Màu nền:</span>
-            <button class="tool-btn" style="background: #0f172a;" onclick="window.slidesStudio.setTheme('#0f172a')"></button>
-            <button class="tool-btn" style="background: #064e3b;" onclick="window.slidesStudio.setTheme('#064e3b')"></button>
-            <button class="tool-btn" style="background: #1e1b4b;" onclick="window.slidesStudio.setTheme('#1e1b4b')"></button>
-            <button class="tool-btn" style="background: #701a75;" onclick="window.slidesStudio.setTheme('#701a75')"></button>
+            <button class="tool-btn" style="background: #0f172a;" title="Tối Cyber" onclick="window.slidesStudio.setTheme('#0f172a')"></button>
+            <button class="tool-btn" style="background: #064e3b;" title="Xanh Ngọc" onclick="window.slidesStudio.setTheme('#064e3b')"></button>
+            <button class="tool-btn" style="background: #1e1b4b;" title="Xanh Đêm" onclick="window.slidesStudio.setTheme('#1e1b4b')"></button>
+            <button class="tool-btn" style="background: #701a75;" title="Tím Hoàng Gia" onclick="window.slidesStudio.setTheme('#701a75')"></button>
+            <button class="tool-btn" style="background: #ffffff; border: 1px solid #cbd5e1;" title="Sáng Thanh Lịch" onclick="window.slidesStudio.setTheme('#ffffff')"></button>
           </div>
 
           <!-- Slide 16:9 Canvas -->

@@ -255,6 +255,132 @@ class WordStudio {
     a.click();
     URL.revokeObjectURL(url);
   }
+
+  insertHorizontalRule() {
+    if (window.sound) window.sound.click();
+    document.execCommand('insertHorizontalRule');
+    this.updateStats();
+  }
+
+  async insertImageFile(file) {
+    if (!file) return;
+    if (window.sound) window.sound.success();
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      this.exec('insertImage', e.target.result);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  setFont(fontName) {
+    if (window.sound) window.sound.click();
+    this.exec('fontName', fontName);
+  }
+
+  setFontSize(size) {
+    if (window.sound) window.sound.click();
+    this.exec('fontSize', size);
+  }
+
+  setTextColor(color) {
+    if (window.sound) window.sound.click();
+    this.exec('foreColor', color);
+  }
+
+  setHighlightColor(color) {
+    if (window.sound) window.sound.click();
+    this.exec('hiliteColor', color);
+  }
+
+  exportHtml(filename = 'Tai_lieu.html') {
+    if (window.sound) window.sound.success();
+    const bodyHtml = this.editorEl ? this.editorEl.innerHTML : '';
+    const fullHtml = `<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>${filename.replace(/\.[^/.]+$/, "")}</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; line-height: 1.6; max-width: 800px; margin: 40px auto; padding: 20px; color: #1e293b; }
+    h1, h2, h3 { color: #0f172a; margin-top: 1.5em; margin-bottom: 0.5em; }
+    table { width: 100%; border-collapse: collapse; margin: 1em 0; }
+    th, td { border: 1px solid #cbd5e1; padding: 8px 12px; text-align: left; }
+    th { background: #f1f5f9; font-weight: 600; }
+    img { max-width: 100%; border-radius: 8px; }
+  </style>
+</head>
+<body>
+  ${bodyHtml}
+</body>
+</html>`;
+    const blob = new Blob([fullHtml], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  exportMarkdown(filename = 'Tai_lieu.md') {
+    if (window.sound) window.sound.success();
+    let md = '';
+    const nodes = this.editorEl ? Array.from(this.editorEl.children) : [];
+    if (nodes.length === 0 && this.editorEl) {
+      md = this.editorEl.innerText;
+    } else {
+      nodes.forEach(node => {
+        const text = node.innerText.trim();
+        if (!text) return;
+        if (node.tagName === 'H1') md += `# ${text}\n\n`;
+        else if (node.tagName === 'H2') md += `## ${text}\n\n`;
+        else if (node.tagName === 'H3') md += `### ${text}\n\n`;
+        else if (node.tagName === 'UL') {
+          Array.from(node.querySelectorAll('li')).forEach(li => {
+            md += `- ${li.innerText.trim()}\n`;
+          });
+          md += '\n';
+        } else if (node.tagName === 'OL') {
+          Array.from(node.querySelectorAll('li')).forEach((li, idx) => {
+            md += `${idx + 1}. ${li.innerText.trim()}\n`;
+          });
+          md += '\n';
+        } else {
+          md += `${text}\n\n`;
+        }
+      });
+    }
+
+    const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  replaceText(findStr, replaceStr, replaceAll = false) {
+    if (!findStr || !this.editorEl) return 0;
+    if (window.sound) window.sound.click();
+    let html = this.editorEl.innerHTML;
+    let count = 0;
+    if (replaceAll) {
+      const regex = new RegExp(findStr.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+      const matches = html.match(regex);
+      count = matches ? matches.length : 0;
+      html = html.replace(regex, replaceStr);
+    } else {
+      const regex = new RegExp(findStr.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+      if (regex.test(html)) {
+        html = html.replace(regex, replaceStr);
+        count = 1;
+      }
+    }
+    this.editorEl.innerHTML = html;
+    this.updateStats();
+    return count;
+  }
 }
 
 window.wordStudio = new WordStudio();

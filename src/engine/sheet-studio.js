@@ -103,7 +103,67 @@ class SheetStudio {
       }
     }
 
-    // 3. Simple math evaluation (e.g. B2*C2 or A1+100)
+    // 3. MAX(A1:A5)
+    const maxMatch = formula.match(/^MAX\(([A-Z0-9:]+)\)$/);
+    if (maxMatch) {
+      const range = maxMatch[1].split(':');
+      if (range.length === 2) {
+        const start = this._parseRef(range[0]);
+        const end = this._parseRef(range[1]);
+        if (start && end) {
+          let maxVal = -Infinity;
+          for (let r = Math.min(start.r, end.r); r <= Math.max(start.r, end.r); r++) {
+            for (let c = Math.min(start.c, end.c); c <= Math.max(start.c, end.c); c++) {
+              const val = Number(this.evaluateCell(this.data[r]?.[c]));
+              if (!isNaN(val) && val > maxVal) maxVal = val;
+            }
+          }
+          return maxVal === -Infinity ? 0 : maxVal;
+        }
+      }
+    }
+
+    // 4. MIN(A1:A5)
+    const minMatch = formula.match(/^MIN\(([A-Z0-9:]+)\)$/);
+    if (minMatch) {
+      const range = minMatch[1].split(':');
+      if (range.length === 2) {
+        const start = this._parseRef(range[0]);
+        const end = this._parseRef(range[1]);
+        if (start && end) {
+          let minVal = Infinity;
+          for (let r = Math.min(start.r, end.r); r <= Math.max(start.r, end.r); r++) {
+            for (let c = Math.min(start.c, end.c); c <= Math.max(start.c, end.c); c++) {
+              const val = Number(this.evaluateCell(this.data[r]?.[c]));
+              if (!isNaN(val) && val < minVal) minVal = val;
+            }
+          }
+          return minVal === Infinity ? 0 : minVal;
+        }
+      }
+    }
+
+    // 5. COUNT(A1:A5)
+    const countMatch = formula.match(/^COUNT\(([A-Z0-9:]+)\)$/);
+    if (countMatch) {
+      const range = countMatch[1].split(':');
+      if (range.length === 2) {
+        const start = this._parseRef(range[0]);
+        const end = this._parseRef(range[1]);
+        if (start && end) {
+          let count = 0;
+          for (let r = Math.min(start.r, end.r); r <= Math.max(start.r, end.r); r++) {
+            for (let c = Math.min(start.c, end.c); c <= Math.max(start.c, end.c); c++) {
+              const val = this.data[r]?.[c];
+              if (val !== undefined && val !== null && String(val).trim() !== '') count++;
+            }
+          }
+          return count;
+        }
+      }
+    }
+
+    // 6. Simple math evaluation (e.g. B2*C2 or A1+100)
     let expr = formula;
     const refRegex = /([A-Z]+[0-9]+)/g;
     expr = expr.replace(refRegex, (match) => {
@@ -285,6 +345,103 @@ class SheetStudio {
     );
     const csvStr = window.excelEngine.exportCsv(evaluatedGrid);
     const blob = new Blob([csvStr], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  sortByColumn(colIdx = this.activeCell.c, ascending = true) {
+    if (window.sound) window.sound.click();
+    let maxPopulatedRow = 0;
+    for (let r = 0; r < this.rows; r++) {
+      if (this.data[r].some(v => v !== '')) maxPopulatedRow = r;
+    }
+    if (maxPopulatedRow <= 0) return;
+
+    const startRow = (isNaN(Number(this.data[0][colIdx])) && this.data[0][colIdx] !== '') ? 1 : 0;
+    const rowsToSort = this.data.slice(startRow, maxPopulatedRow + 1);
+
+    rowsToSort.sort((rowA, rowB) => {
+      const valA = this.evaluateCell(rowA[colIdx]);
+      const valB = this.evaluateCell(rowB[colIdx]);
+      const numA = Number(valA);
+      const numB = Number(valB);
+
+      if (!isNaN(numA) && !isNaN(numB)) {
+        return ascending ? (numA - numB) : (numB - numA);
+      }
+      return ascending ? String(valA).localeCompare(String(valB)) : String(valB).localeCompare(String(valA));
+    });
+
+    for (let i = 0; i < rowsToSort.length; i++) {
+      this.data[startRow + i] = rowsToSort[i];
+    }
+    this.renderGrid();
+  }
+
+  async exportPdf(filename = 'Bang_tinh.pdf') {
+    if (window.sound) window.sound.success();
+    let maxR = 0, maxC = 0;
+    for (let r = 0; r < this.rows; r++) {
+      for (let c = 0; c < this.cols; c++) {
+        if (this.data[r][c] !== '') {
+          if (r > maxR) maxR = r;
+          if (c > maxC) maxC = c;
+        }
+      }
+    }
+    maxR = Math.max(maxR, 4);
+    maxC = Math.max(maxC, 3);
+
+    const canvas = document.createElement('canvas');
+    canvas.width = 1754; // A4 Landscape (150 DPI)
+    canvas.height = 1240;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    const margin = 80;
+    const colW = (canvas.width - margin * 2) / (maxC + 1);
+    const rowH = 38;
+    let curY = margin;
+
+    // Header Title
+    ctx.fillStyle = '#0f172a';
+    ctx.font = 'bold 28px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif';
+    ctx.fillText('BẢNG TÍNH EXCEL - OFFFICE TOOL PRO', margin, curY);
+    curY += 50;
+
+    for (let r = 0; r <= maxR; r++) {
+      const isHeader = (r === 0);
+      for (let c = 0; c <= maxC; c++) {
+        const x = margin + c * colW;
+        const val = String(this.evaluateCell(this.data[r][c]) || '');
+
+        ctx.fillStyle = isHeader ? '#f1f5f9' : (r % 2 === 0 ? '#f8fafc' : '#ffffff');
+        ctx.fillRect(x, curY, colW, rowH);
+        ctx.strokeStyle = '#cbd5e1';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x, curY, colW, rowH);
+
+        ctx.fillStyle = isHeader ? '#0f172a' : '#1e293b';
+        ctx.font = `${isHeader ? 'bold' : 'normal'} 16px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif`;
+        ctx.fillText(val.substring(0, 22), x + 8, curY + 25);
+      }
+      curY += rowH;
+    }
+
+    const pdfDoc = await PDFLib.PDFDocument.create();
+    const imgDataUrl = canvas.toDataURL('image/jpeg', 0.95);
+    const imgBytes = await fetch(imgDataUrl).then(r => r.arrayBuffer());
+    const embeddedJpg = await pdfDoc.embedJpg(imgBytes);
+    const page = pdfDoc.addPage([841.89, 595.28]); // A4 Landscape
+    page.drawImage(embeddedJpg, { x: 0, y: 0, width: 841.89, height: 595.28 });
+
+    const pdfBytes = await pdfDoc.save();
+    const blob = new Blob([pdfBytes], { type: 'application/pdf' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
